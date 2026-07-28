@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Boundary Proximity Calculator — geodetic evidence engine for zoning decree challenges. WGS84 · Haversine · DMS/DD validation." />
+<title>Boundary Proximity Calculator</title>
+<style>
+/* ============================================================
+   1. DESIGN TOKENS
+   ============================================================ */
+:root{
+  --bg:#eef1f6; --topbar-bg:rgba(238,241,246,.9);
+  --surface:#ffffff; --surface2:#f4f6fa;
+  --ink:#16202e; --ink2:#5b6779;
+  --line:#dbe1ea; --line2:#c3cdd9;
+  --accent:#0d7a63; --accent-soft:rgba(13,122,99,.12); --on-accent:#ffffff;
+  --gold:#a8790f; --gold-bright:#e9b949;
+  --ok:#177a4c; --ok-soft:rgba(23,122,76,.12);
+  --err:#c03d33; --err-soft:rgba(192,61,51,.10);
+  --info:#275e9e;
+  --win-a:#dfae3c; --win-b:#f3d98b; --win-bg:#fdf6e2; --win-ink:#7a5a08; --win-num:#8a6408;
+  --shadow:0 1px 2px rgba(22,32,46,.06),0 10px 28px rgba(22,32,46,.09);
+  --contour:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='620'%3E%3Cg fill='none' stroke='%230d7a63' stroke-width='1'%3E%3Cpath d='M0 80q155-64 310 0t310 0'/%3E%3Cpath d='M0 165q155-64 310 0t310 0'/%3E%3Cpath d='M0 250q155-64 310 0t310 0'/%3E%3Cpath d='M0 335q155-64 310 0t310 0'/%3E%3Cpath d='M0 420q155-64 310 0t310 0'/%3E%3Cpath d='M0 505q155-64 310 0t310 0'/%3E%3Ccircle cx='150' cy='470' r='24'/%3E%3Ccircle cx='150' cy='470' r='46'/%3E%3Ccircle cx='150' cy='470' r='70'/%3E%3Ccircle cx='150' cy='470' r='96'/%3E%3Ccircle cx='480' cy='140' r='18'/%3E%3Ccircle cx='480' cy='140' r='38'/%3E%3Ccircle cx='480' cy='140' r='60'/%3E%3C/g%3E%3C/svg%3E");
+  --contour-op:.5;
+  --sans:"Inter","Segoe UI","Helvetica Neue",Arial,system-ui,sans-serif;
+  --mono:"Cascadia Code","SF Mono","JetBrains Mono",Consolas,"Roboto Mono",monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#121826; --topbar-bg:rgba(18,24,38,.88);
+  --surface:#1a2234; --surface2:#212b42;
+  --ink:#e7ecf5; --ink2:#98a4ba;
+  --line:#2b3650; --line2:#3a486b;
+  --accent:#3ecfa5; --accent-soft:rgba(62,207,165,.16); --on-accent:#0b2b21;
+  --gold:#f2c14e; --gold-bright:#f2c14e;
+  --ok:#54c98d; --ok-soft:rgba(84,201,141,.14);
+  --err:#ff7b6f; --err-soft:rgba(255,123,111,.12);
+  --info:#7fb0ff;
+  --win-a:#3ecfa5; --win-b:#8fe7cd; --win-bg:#16302a; --win-ink:#0e3a2d; --win-num:#6fe0bd;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.35);
+  --contour:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='620'%3E%3Cg fill='none' stroke='%233ecfa5' stroke-width='1'%3E%3Cpath d='M0 80q155-64 310 0t310 0'/%3E%3Cpath d='M0 165q155-64 310 0t310 0'/%3E%3Cpath d='M0 250q155-64 310 0t310 0'/%3E%3Cpath d='M0 335q155-64 310 0t310 0'/%3E%3Cpath d='M0 420q155-64 310 0t310 0'/%3E%3Cpath d='M0 505q155-64 310 0t310 0'/%3E%3Ccircle cx='150' cy='470' r='24'/%3E%3Ccircle cx='150' cy='470' r='46'/%3E%3Ccircle cx='150' cy='470' r='70'/%3E%3Ccircle cx='150' cy='470' r='96'/%3E%3Ccircle cx='480' cy='140' r='18'/%3E%3Ccircle cx='480' cy='140' r='38'/%3E%3Ccircle cx='480' cy='140' r='60'/%3E%3C/g%3E%3C/svg%3E");
+  --contour-op:.28;
+  color-scheme:dark;
+}
+
+/* ============================================================
+   2. BASE / TYPOGRAPHY / AMBIENT BACKGROUND
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);font-size:15px;line-height:1.55;
+  color:var(--ink);background:var(--bg);min-height:100vh;
+  transition:background .2s ease-in-out,color .2s ease-in-out;
+}
+html[lang="ar"] body{font-family:"Cairo","Tajawal","Segoe UI",Tahoma,system-ui,sans-serif}
+body::before{ /* dot survey grid */
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:radial-gradient(var(--line2) 1px,transparent 1.4px);
+  background-size:24px 24px;opacity:.42;
+}
+body::after{ /* topographic contours */
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:var(--contour);opacity:var(--contour-op);
+  transition:opacity .2s ease-in-out;
+}
+.mono{font-family:var(--mono);direction:ltr;unicode-bidi:isolate}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+::selection{background:var(--accent-soft)}
+
+/* ============================================================
+   3. STICKY TOPBAR + RULER STRIP
+   ============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:11px clamp(16px,4vw,44px);
+  background:var(--topbar-bg);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px;margin-inline-end:auto}
+.brand-mark{
+  position:relative;flex:0 0 auto;width:42px;height:42px;border-radius:11px;
+  display:grid;place-items:center;color:var(--accent);
+  background:var(--accent-soft);border:1.5px solid var(--accent);
+}
+.brand-mark svg{width:24px;height:24px}
+.brand-mark::after{
+  content:"";position:absolute;inset:-4px;border-radius:14px;border:2px solid var(--accent);
+  opacity:0;animation:ping 3s ease-out infinite;
+}
+@keyframes ping{0%{transform:scale(.82);opacity:.5}70%,100%{transform:scale(1.28);opacity:0}}
+.brand-text h1{font-size:17.5px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.brand-text p{font-size:12px;color:var(--ink2);font-weight:500}
+.top-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:99px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink2);
+  font-family:var(--mono);font-size:11.5px;white-space:nowrap;
+}
+.chip svg{width:13px;height:13px}
+.seg{display:flex;gap:2px;padding:3px;border-radius:99px;border:1px solid var(--line2);background:var(--surface)}
+.seg-btn{
+  border:0;background:transparent;padding:4px 14px;border-radius:99px;
+  font-size:12.5px;font-weight:700;color:var(--ink2);
+  transition:background .2s ease-in-out,color .2s ease-in-out,transform .2s ease-in-out;
+}
+.seg-btn:hover{color:var(--ink)}
+.seg-btn.active{background:var(--ink);color:var(--bg)}
+.icon-btn{
+  width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line2);background:var(--surface);color:var(--ink);
+  transition:transform .2s ease-in-out,border-color .2s ease-in-out,background .2s ease-in-out;
+}
+.icon-btn:hover{transform:rotate(14deg) scale(1.06);border-color:var(--accent)}
+.icon-btn svg{width:17px;height:17px}
+:root[data-theme="light"] .i-sun{display:none}
+:root[data-theme="dark"] .i-moon{display:none}
+.ruler{
+  height:13px;border-bottom:1px solid var(--line);opacity:.75;
+  background:
+    repeating-linear-gradient(90deg,var(--line2) 0 1px,transparent 1px 60px),
+    repeating-linear-gradient(90deg,var(--line2) 0 1px,transparent 1px 12px);
+  background-size:auto 13px,auto 7px;background-position:bottom left;background-repeat:repeat-x;
+}
+
+/* ============================================================
+   4. WORKSPACE LAYOUT
+   ============================================================ */
+.workspace{
+  display:grid;grid-template-columns:400px 1fr;gap:22px;align-items:start;
+  max-width:1480px;margin-inline:auto;padding:26px clamp(14px,4vw,44px) 56px;
+}
+@media (max-width:1020px){.workspace{grid-template-columns:1fr}}
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shadow);overflow:hidden;
+  transition:background .2s ease-in-out,border-color .2s ease-in-out;
+}
+.station{position:sticky;top:96px}
+@media (max-width:1020px){.station{position:static}}
+.panel-body{padding:20px 22px 22px}
+.kicker{
+  display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+  text-transform:uppercase;color:var(--accent);
+  border-inline-start:3px solid var(--accent);padding-inline-start:9px;
+}
+html[lang="en"] .kicker{letter-spacing:.16em}
+.panel-head h2{font-size:clamp(19px,2.3vw,25px);font-weight:800;letter-spacing:-.015em;margin-top:7px}
+.sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
+.panel-head.split{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* scroll reveal */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* ============================================================
+   5. BASE STATION — TABS, FIELDS, VALIDATION
+   ============================================================ */
+.tabs{display:flex;gap:3px;margin:16px 0 18px;padding:3px;border-radius:10px;background:var(--surface2);border:1px solid var(--line)}
+.tab-btn{
+  flex:1;border:0;background:transparent;padding:9px 10px;border-radius:8px;
+  font-size:13px;font-weight:700;color:var(--ink2);
+  transition:background .2s ease-in-out,color .2s ease-in-out,box-shadow .2s ease-in-out;
+}
+.tab-btn:hover{color:var(--ink)}
+.tab-btn.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.pane{display:none}
+.pane.active{display:block;animation:paneIn .25s ease-in-out}
+@keyframes paneIn{from{opacity:0;transform:translateY(5px)}}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.input-wrap{position:relative}
+.field-input{
+  width:100%;padding:10px 40px 10px 13px;border-radius:9px;
+  border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);
+  transition:border-color .2s ease-in-out,box-shadow .2s ease-in-out,background .2s ease-in-out;
+}
+.field-input.mono{font-size:14px;text-align:left}
+.field-input:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+.field-input.ok{border-color:var(--ok)}
+.field-input.err{border-color:var(--err);background:var(--err-soft)}
+.v-icon{position:absolute;inset-inline-end:11px;top:50%;transform:translateY(-50%);display:flex;pointer-events:none}
+.v-icon svg{width:17px;height:17px;animation:pop .25s ease-in-out}
+.v-icon .i-ok{color:var(--ok)} .v-icon .i-err{color:var(--err)}
+.v-icon .i-ok,.v-icon .i-err{display:none}
+.input-wrap input.ok ~ .v-icon .i-ok{display:inline}
+.input-wrap input.err ~ .v-icon .i-err{display:inline}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+.field-msg{font-size:11.5px;color:var(--ink2);margin-top:5px;min-height:16px;transition:color .2s ease-in-out}
+.field-msg.ok{color:var(--ok)} .field-msg.err{color:var(--err)} .field-msg.norm{color:var(--gold)}
+.readout{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-size:12px;color:var(--ink2)}
+.readout code{font-size:12.5px;font-weight:600;color:var(--ink)}
+.sym-row{display:flex;gap:6px;margin-top:7px}
+.sym{
+  font-family:var(--mono);font-size:13px;font-weight:700;line-height:1;
+  padding:5px 12px;border-radius:7px;border:1px solid var(--line2);background:var(--surface2);
+  transition:all .2s ease-in-out;
+}
+.sym:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.decree-card{
+  margin-top:4px;padding:13px 15px;border-radius:11px;border:1px dashed var(--line2);
+  background:var(--surface2);transition:border-color .2s ease-in-out;
+}
+.decree-card.live{border-color:var(--accent);border-style:solid}
+.decree-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.decree-label{font-size:12px;font-weight:700;color:var(--ink2)}
+.decree-val{font-size:21px;font-weight:700;margin-top:6px;color:var(--ink)}
+.lock{
+  margin-top:6px;padding:14px 16px;border-radius:11px;
+  background:var(--accent-soft);border:1px solid var(--accent);
+}
+.lock-kicker{font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--accent)}
+html[lang="en"] .lock-kicker{letter-spacing:.14em}
+.lock-dd{font-size:16px;font-weight:700;margin-top:5px}
+.lock-dms{font-size:12px;color:var(--ink2);margin-top:2px}
+.shake{animation:shake .3s ease-in-out 2}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* ============================================================
+   6. BUTTONS / TOOLBAR
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:9px;
+  border:1px solid var(--line2);background:var(--surface);color:var(--ink);
+  font-size:13.5px;font-weight:700;white-space:nowrap;
+  transition:transform .2s ease-in-out,box-shadow .2s ease-in-out,border-color .2s ease-in-out,background .2s ease-in-out,filter .2s ease-in-out;
+}
+.btn svg{width:15px;height:15px;flex:0 0 auto}
+.btn:hover{transform:translateY(-1px);border-color:var(--accent);box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0) scale(.97)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.big{padding:12px 20px;font-size:14.5px;border-radius:10px}
+.btn.tiny{padding:5px 11px;font-size:12px;border-radius:7px}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ============================================================
+   7. PASTE DRAWER
+   ============================================================ */
+.paste-drawer{
+  max-height:0;opacity:0;overflow:hidden;visibility:hidden;
+  border-bottom:1px solid transparent;background:var(--surface2);
+  transition:max-height .25s ease-in-out,opacity .2s ease-in-out,visibility 0s linear .25s;
+}
+.paste-drawer.open{max-height:340px;opacity:1;visibility:visible;transition-delay:0s;border-bottom-color:var(--line)}
+.paste-inner{padding:16px 22px}
+.paste-hint{font-size:12px;color:var(--ink2);margin-bottom:9px}
+#pasteBox{
+  width:100%;min-height:96px;resize:vertical;padding:10px 12px;border-radius:9px;
+  border:1.5px solid var(--line);background:var(--surface);font-size:12.5px;
+  transition:border-color .2s ease-in-out,box-shadow .2s ease-in-out;
+}
+#pasteBox:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.drawer-actions{display:flex;align-items:center;gap:10px;margin-top:10px}
+#pasteResult{font-size:12px;font-weight:700;color:var(--ok)}
+
+/* ============================================================
+   8. VERDICT BANNER + CHART
+   ============================================================ */
+.verdict-zone{padding:18px 22px 4px}
+.verdict-card{
+  position:relative;border:1px solid var(--win-a);border-radius:12px;overflow:hidden;
+  background:var(--surface);animation:paneIn .3s ease-in-out;
+}
+.verdict-card::before{
+  content:"";position:absolute;inset-inline:0;top:0;height:4px;
+  background:linear-gradient(90deg,var(--win-a),var(--win-b),var(--win-a));
+  background-size:200% 100%;animation:sheen 2.6s linear infinite;
+}
+.verdict-head{padding:16px 20px 0}
+.verdict-badge{
+  display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;
+  color:var(--win-ink);background:var(--win-b);border:1px solid var(--win-a);
+  padding:3px 10px;border-radius:99px;
+}
+html[lang="en"] .verdict-badge{letter-spacing:.13em}
+.verdict-head h3{font-size:clamp(18px,2.2vw,23px);font-weight:800;margin-top:8px;letter-spacing:-.01em}
+.verdict-head p{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.verdict-grid{
+  display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;
+  padding:14px 20px 6px;flex-wrap:wrap;
+}
+@media (max-width:640px){.verdict-grid{grid-template-columns:1fr}}
+.verdict-id{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.verdict-id > svg{width:26px;height:26px;color:var(--win-num);flex:0 0 auto;margin-top:2px}
+.verdict-id strong{display:block;font-size:16px;font-weight:800;overflow-wrap:anywhere}
+.verdict-coords{font-size:12px;color:var(--ink2);margin-top:3px}
+.verdict-dms{font-size:11px;color:var(--ink2);opacity:.8}
+.verdict-num{text-align:end}
+.verdict-numlabel{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink2)}
+.big-num{font-family:var(--mono);font-size:clamp(32px,4vw,44px);font-weight:700;line-height:1.05;color:var(--win-num)}
+.verdict-num .unit{font-size:13px;font-weight:700;color:var(--ink2);margin-inline-start:6px}
+.chart-wrap{padding:8px 20px 18px}
+.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.chart{display:flex;flex-direction:column;gap:4px;max-height:190px;overflow-y:auto;padding-inline-end:4px}
+.bar-row{display:grid;grid-template-columns:minmax(90px,170px) 1fr auto;gap:10px;align-items:center;font-size:12px}
+.bar-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
+.bar{height:8px;border-radius:99px;background:var(--surface2);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--info);transition:width .5s ease-in-out}
+.bar-row.win .bar i{background:linear-gradient(90deg,var(--win-a),var(--win-b))}
+.bar-row.win .bar-name,.bar-row.win .bar-val{color:var(--win-num);font-weight:800}
+.bar-val{font-family:var(--mono);font-size:11.5px;color:var(--ink2)}
+.verdict-empty{
+  margin:4px 22px 18px;padding:16px 18px;border:1.5px dashed var(--line2);border-radius:11px;
+  color:var(--ink2);font-size:13px;text-align:center;
+}
+.tier-chip{
+  display:inline-block;font-size:11px;font-weight:800;padding:2.5px 10px;border-radius:99px;
+  margin-inline-start:8px;vertical-align:2px;
+}
+.tier-premium{background:rgba(233,185,73,.18);color:var(--gold);border:1px solid rgba(233,185,73,.45)}
+.tier-medium{background:rgba(39,94,158,.13);color:var(--info);border:1px solid rgba(39,94,158,.35)}
+.tier-economic{background:rgba(120,130,146,.13);color:var(--ink2);border:1px solid var(--line2)}
+
+/* ============================================================
+   9. MATRIX TABLE
+   ============================================================ */
+.table-wrap{overflow-x:auto;margin-top:14px;border-top:1px solid var(--line)}
+table{width:100%;min-width:880px;border-collapse:collapse}
+thead th{
+  font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--ink2);
+  text-align:start;padding:10px 12px;background:var(--surface2);border-bottom:2px solid var(--line);
+  white-space:nowrap;
+}
+html[lang="en"] thead th{letter-spacing:.09em}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;transition:background .2s ease-in-out}
+tbody tr{transition:opacity .18s ease-in-out,transform .18s ease-in-out}
+tr.mrow{animation:rowIn .25s ease-in-out}
+@keyframes rowIn{from{opacity:0;transform:translateY(-5px)}}
+tr.leaving{opacity:0;transform:translateX(10px)}
+.c-rank{width:52px;text-align:center}
+.rank{
+  display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 6px;border-radius:8px;
+  font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink2);
+  background:var(--surface2);border:1px solid var(--line);transition:all .2s ease-in-out;
+}
+.c-name{min-width:170px}
+.anchor-tag{
+  display:none;font-size:9.5px;font-weight:800;text-transform:uppercase;
+  color:var(--win-ink);background:var(--win-b);border:1px solid var(--win-a);
+  border-radius:99px;padding:2px 8px;margin-inline-start:7px;vertical-align:2px;
+  animation:pop .3s ease-in-out;
+}
+html[lang="en"] .anchor-tag{letter-spacing:.1em}
+tr.winner .anchor-tag{display:inline-block}
+.cell-input{
+  width:100%;padding:6px 9px;border-radius:7px;color:var(--ink);
+  border:1px solid transparent;background:transparent;
+  transition:border-color .2s ease-in-out,background .2s ease-in-out,box-shadow .2s ease-in-out;
+}
+tr:hover .cell-input{border-color:var(--line);background:var(--surface2)}
+.cell-input:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+.cell-input.mono{font-size:13px;text-align:left}
+.cell-input.err{border-color:var(--err);background:var(--err-soft)}
+.cell-select{
+  appearance:none;-webkit-appearance:none;width:100%;padding:6px 26px 6px 9px;border-radius:7px;
+  border:1px solid transparent;background:transparent;cursor:pointer;font-size:12.5px;font-weight:600;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238a94a6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+  transition:border-color .2s ease-in-out,background-color .2s ease-in-out;
+}
+[dir="rtl"] .cell-select{background-position:left 9px center}
+tr:hover .cell-select{border-color:var(--line);background-color:var(--surface2)}
+.cell-select:focus{outline:none;border-color:var(--accent)}
+.cell-read{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--ink2)}
+.cell-read .mono{font-size:11px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--line2);flex:0 0 auto;transition:background .2s ease-in-out}
+.dot.ok{background:var(--ok)} .dot.norm{background:var(--gold-bright)} .dot.err{background:var(--err)}
+.c-dist{white-space:nowrap;text-align:end}
+.dist{font-size:14px;font-weight:700;padding:3px 7px;border-radius:7px}
+.dist.flash{animation:flash .9s ease-out}
+@keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
+tr.winner .dist{color:var(--win-num)}
+.row-del{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  border:1px solid transparent;background:transparent;color:var(--ink2);
+  transition:all .2s ease-in-out;
+}
+.row-del svg{width:14px;height:14px}
+.row-del:hover{color:var(--err);border-color:var(--err);background:var(--err-soft);transform:scale(1.08)}
+/* — the winning row: animated shimmer banner (gold in light, green in dark) — */
+tr.winner > td{
+  background:linear-gradient(110deg,var(--win-bg) 30%,var(--win-b) 50%,var(--win-bg) 70%);
+  background-size:220% 100%;animation:sheen 2.6s linear infinite;
+  border-top:1px solid var(--win-a);border-bottom:1px solid var(--win-a);
+}
+tr.winner > td:first-child{border-inline-start:3px solid var(--win-a)}
+tr.winner .rank{background:var(--win-a);color:var(--win-ink);border-color:var(--win-a)}
+tr.winner .cell-input,tr.winner .cell-select{background:transparent;border-color:transparent}
+@keyframes sheen{from{background-position:200% 0}to{background-position:-160% 0}}
+tr.invalid .dist{color:var(--err)}
+.empty-state{
+  margin:18px 22px;padding:22px;border:1.5px dashed var(--line2);border-radius:11px;
+  text-align:center;color:var(--ink2);font-size:13px;
+}
+.matrix-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 22px 22px}
+#runBtn{flex:1;justify-content:center;min-width:220px}
+.run-meta{font-size:12px;color:var(--ink2);font-weight:600}
+
+/* ============================================================
+   10. FOOTER / TOAST / MISC
+   ============================================================ */
+.foot{
+  max-width:1480px;margin-inline:auto;padding:0 clamp(16px,4vw,44px) 44px;
+  color:var(--ink2);font-size:12px;display:flex;flex-direction:column;gap:7px;
+}
+.formula{font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;width:max-content;max-width:100%;overflow-x:auto}
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translate(-50%,16px);z-index:99;
+  padding:11px 20px;border-radius:10px;background:var(--ink);color:var(--bg);
+  font-size:13px;font-weight:700;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:opacity .2s ease-in-out,transform .2s ease-in-out;
+  max-width:min(92vw,480px);text-align:center;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:760px){.chip-datum,.chip-clock{display:none}.brand-text p{display:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ STICKY TOPBAR ══════════════ -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+    </span>
+    <div class="brand-text">
+      <h1 data-i18n="app.title">Boundary Proximity Calculator</h1>
+      <p data-i18n="app.tag">Geodetic evidence engine for zoning decree challenges</p>
+    </div>
+  </div>
+  <div class="top-controls">
+    <span class="chip chip-datum">WGS84 · R = 6,371,000 m</span>
+    <span class="chip chip-clock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span id="clock">--:--:--</span>
+    </span>
+    <div class="seg" role="group" aria-label="Language / اللغة">
+      <button type="button" id="langEn" class="seg-btn active">EN</button>
+      <button type="button" id="langAr" class="seg-btn">عربي</button>
+    </div>
+    <button type="button" id="themeBtn" class="icon-btn" data-i18n-title="tt.theme" aria-label="Toggle theme">
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+<div class="ruler" aria-hidden="true"></div>
+
+<main class="workspace">
+
+  <!-- ══════════════ PANEL A · BASE STATION ══════════════ -->
+  <section class="panel station reveal" aria-labelledby="stationKicker">
+    <div class="panel-body">
+      <span class="kicker" id="stationKicker" data-i18n="station.kicker">Base Station</span>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-pane="paneDD" data-i18n="station.tabDD">User Target · Decimal GPS</button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" data-pane="paneDMS" data-i18n="station.tabDMS">Decree Base · Raw DMS</button>
+      </div>
+
+      <!-- Channel 1 : Decimal Degrees -->
+      <div class="pane active" id="paneDD">
+        <div class="field">
+          <label for="latDD" data-i18n="field.lat">Latitude (Y)</label>
+          <div class="input-wrap">
+            <input id="latDD" class="field-input mono" inputmode="decimal" autocomplete="off" spellcheck="false" data-i18n-ph="ph.lat" placeholder="e.g. 30.044400" />
+            <span class="v-icon" aria-hidden="true">
+              <svg class="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+              <svg class="i-err" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.4h.01"/></svg>
+            </span>
+          </div>
+          <p class="field-msg" id="latMsg" role="status" data-i18n="status.empty">Awaiting input</p>
+          <div class="readout"><span data-i18n="conv.dms">DMS equivalent</span><code class="mono" id="latDMSOut">—</code></div>
+        </div>
+        <div class="field">
+          <label for="lonDD" data-i18n="field.lon">Longitude (X)</label>
+          <div class="input-wrap">
+            <input id="lonDD" class="field-input mono" inputmode="decimal" autocomplete="off" spellcheck="false" data-i18n-ph="ph.lon" placeholder="e.g. 31.235700" />
+            <span class="v-icon" aria-hidden="true">
+              <svg class="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+              <svg class="i-err" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.4h.01"/></svg>
+            </span>
+          </div>
+          <p class="field-msg" id="lonMsg" role="status" data-i18n="status.empty">Awaiting input</p>
+          <div class="readout"><span data-i18n="conv.dms">DMS equivalent</span><code class="mono" id="lonDMSOut">—</code></div>
+        </div>
+      </div>
+
+      <!-- Channel 2 : Raw DMS decree base -->
+      <div class="pane" id="paneDMS">
+        <div class="field">
+          <label for="decX" data-i18n="field.dmsX">DMS X — Longitude</label>
+          <div class="input-wrap">
+            <input id="decX" class="field-input mono" autocomplete="off" spellcheck="false" data-i18n-ph="ph.dms" placeholder="DD°MM'SS.ss&quot;" />
+            <span class="v-icon" aria-hidden="true">
+              <svg class="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+              <svg class="i-err" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.4h.01"/></svg>
+            </span>
+          </div>
+          <div class="sym-row" aria-hidden="true">
+            <button type="button" class="sym" data-for="decX" data-sym="°">°</button>
+            <button type="button" class="sym" data-for="decX" data-sym="'">'</button>
+            <button type="button" class="sym" data-for="decX" data-sym="&quot;">"</button>
+          </div>
+          <p class="field-msg" id="decXMsg" role="status" data-i18n="status.empty">Awaiting input</p>
+          <div class="readout"><span data-i18n="conv.dec">Decimal equivalent</span><code class="mono" id="decXOut">—</code></div>
+        </div>
+        <div class="field">
+          <label for="decY" data-i18n="field.dmsY">DMS Y — Latitude</label>
+          <div class="input-wrap">
+            <input id="decY" class="field-input mono" autocomplete="off" spellcheck="false" data-i18n-ph="ph.dms" placeholder="DD°MM'SS.ss&quot;" />
+            <span class="v-icon" aria-hidden="true">
+              <svg class="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+              <svg class="i-err" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.4h.01"/></svg>
+            </span>
+          </div>
+          <div class="sym-row" aria-hidden="true">
+            <button type="button" class="sym" data-for="decY" data-sym="°">°</button>
+            <button type="button" class="sym" data-for="decY" data-sym="'">'</button>
+            <button type="button" class="sym" data-for="decY" data-sym="&quot;">"</button>
+          </div>
+          <p class="field-msg" id="decYMsg" role="status" data-i18n="status.empty">Awaiting input</p>
+          <div class="readout"><span data-i18n="conv.dec">Decimal equivalent</span><code class="mono" id="decYOut">—</code></div>
+        </div>
+        <div class="decree-card" id="decreeCard">
+          <div class="decree-top">
+            <span class="decree-label" data-i18n="decree.dist">Target ↔ decree base separation</span>
+            <button type="button" id="useDecree" class="btn tiny" disabled data-i18n="decree.use">Set as target</button>
+          </div>
+          <div class="decree-val mono" id="decreeDist">—</div>
+        </div>
+      </div>
+
+      <div class="lock" id="lockCard">
+        <span class="lock-kicker" data-i18n="lock.kicker">Active Target Station</span>
+        <div class="lock-dd mono" id="lockDD">—</div>
+        <div class="lock-dms mono" id="lockDMS">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PANEL B · PROXIMITY MATRIX ══════════════ -->
+  <section class="panel matrix reveal" aria-labelledby="matrixTitle">
+    <div class="panel-body panel-head split">
+      <div>
+        <span class="kicker" data-i18n="matrix.kicker">Reference Matrix</span>
+        <h2 id="matrixTitle" data-i18n="matrix.title">Zone Boundary Proximity Matrix</h2>
+        <p class="sub" data-i18n="matrix.sub">Up to 100 reference blocks · Haversine great-circle · WGS84 sphere</p>
+      </div>
+      <div class="toolbar">
+        <button type="button" id="addRowBtn" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="btn.add">Add row</span></button>
+        <button type="button" id="pasteBtn" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a3 3 0 0 1 6 0M9 11h6M9 15h6"/></svg><span data-i18n="btn.paste">Bulk paste</span></button>
+        <button type="button" id="sampleBtn" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13.5 9 5 9-5"/></svg><span data-i18n="btn.sample">Sample decree</span></button>
+        <button type="button" id="clearBtn" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m3 0-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7"/></svg><span data-i18n="btn.clear">Clear</span></button>
+        <span class="chip" id="rowCount">0 / 100</span>
+      </div>
+    </div>
+
+    <div class="paste-drawer" id="pasteDrawer">
+      <div class="paste-inner">
+        <p class="paste-hint" data-i18n="paste.hint">One block per line: Name ⇥ Tier ⇥ DMS X ⇥ DMS Y</p>
+        <textarea id="pasteBox" class="mono" spellcheck="false" placeholder="Corniche North&#9;Premium&#9;31°14'10.90&quot;&#9;30°02'39.80&quot;&#10;Block 12 — Abdeen&#9;اقتصادي&#9;31°14'45.00&quot;&#9;30°02'30.00&quot;"></textarea>
+        <div class="drawer-actions">
+          <button type="button" id="pasteApply" class="btn primary tiny" data-i18n="paste.apply">Parse &amp; Append</button>
+          <button type="button" id="pasteCancel" class="btn tiny" data-i18n="paste.cancel">Cancel</button>
+          <span id="pasteResult" role="status"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict-zone" aria-live="polite">
+      <div class="verdict-card" id="verdictCard" hidden>
+        <div class="verdict-head">
+          <span class="verdict-badge" data-i18n="verdict.kicker">Winning Indicator</span>
+          <h3 data-i18n="verdict.title">Administrative Zone Anchor</h3>
+          <p data-i18n="verdict.sub">Nearest reference block to the target station — least proximity zone</p>
+        </div>
+        <div class="verdict-grid">
+          <div class="verdict-id">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><path d="M12 7.5V21m0 0c-4.5 0-8-3-8.5-7H6m6 7c4.5 0 8-3 8.5-7H18"/></svg>
+            <div style="min-width:0">
+              <strong id="vName">—</strong><span id="vTier" class="tier-chip tier-medium">—</span>
+              <div class="verdict-coords mono" id="vCoords">—</div>
+              <div class="verdict-dms mono" id="vDMS">—</div>
+            </div>
+          </div>
+          <div class="verdict-num">
+            <span class="verdict-numlabel" data-i18n="verdict.dist">Absolute geodetic distance</span>
+            <div><span class="big-num" id="vDist">—</span><span class="unit" data-i18n="verdict.unit">meters</span></div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title" data-i18n="verdict.chart">Distance distribution · sorted ascending</div>
+          <div class="chart" id="chart"></div>
+        </div>
+      </div>
+      <p class="verdict-empty" id="verdictEmpty" data-i18n="verdict.none">No reference blocks yet.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table aria-label="Zone boundary proximity matrix">
+        <thead>
+          <tr>
+            <th data-i18n="th.rank">#</th>
+            <th data-i18n="th.block">Block / Mantiqah</th>
+            <th data-i18n="th.tier">Tier</th>
+            <th data-i18n="th.dmsX">DMS X · Lon</th>
+            <th data-i18n="th.dmsY">DMS Y · Lat</th>
+            <th data-i18n="th.dist">Distance (m)</th>
+            <th><span class="sr" aria-hidden="true"></span></th>
+          </tr>
+        </thead>
+        <tbody id="matrixBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState" data-i18n="empty.rows">Matrix empty — add rows manually or bulk-paste your decree annex.</div>
+
+    <div class="matrix-foot">
+      <button type="button" id="runBtn" class="btn primary big" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+        <span data-i18n="btn.run">Run Proximity Analysis</span>
+      </button>
+      <button type="button" id="exportBtn" class="btn big">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <span data-i18n="btn.export">Export Case Evidence (.CSV)</span>
+      </button>
+      <span class="run-meta" id="runMeta"></span>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <code class="formula mono">d = 2R·asin( √( sin²(Δφ/2) + cos φ₁ · cos φ₂ · sin²(Δλ/2) ) ) &nbsp;·&nbsp; R = 6,371,000 m</code>
+  <p data-i18n="foot.note">Distances are computed client-side with the Haversine formula over a spherical Earth and are indicative.</p>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<!-- ══════════════ ROW TEMPLATE ══════════════ -->
+<template id="rowTpl">
+  <tr class="mrow">
+    <td class="c-rank"><span class="rank">–</span></td>
+    <td class="c-name">
+      <input class="cell-input" data-field="name" data-i18n-ph="name.ph" autocomplete="off" spellcheck="false" placeholder="Block name…" />
+      <span class="anchor-tag" data-i18n="winner.badge">ANCHOR</span>
+    </td>
+    <td class="c-tier">
+      <select class="cell-select" data-field="tier">
+        <option value="premium"></option>
+        <option value="medium"></option>
+        <option value="economic"></option>
+      </select>
+    </td>
+    <td class="c-dms">
+      <input class="cell-input mono" data-field="dmsX" autocomplete="off" spellcheck="false" placeholder="31°14'10.9&quot;" />
+      <div class="cell-read"><i class="dot" data-dot="x"></i><span class="mono" data-read="x">——</span></div>
+    </td>
+    <td class="c-dms">
+      <input class="cell-input mono" data-field="dmsY" autocomplete="off" spellcheck="false" placeholder="30°02'39.8&quot;" />
+      <div class="cell-read"><i class="dot" data-dot="y"></i><span class="mono" data-read="y">——</span></div>
+    </td>
+    <td class="c-dist"><span class="dist mono" data-dist>—</span></td>
+    <td class="c-act">
+      <button type="button" class="row-del" data-act="del" data-i18n-title="tt.del" aria-label="Remove row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </td>
+  </tr>
+</template>
+
+<script>
+(() => {
+'use strict';
+
+/* ════════════════════════════════════════════════════════════
+   CONSTANTS
+   ════════════════════════════════════════════════════════════ */
+const R_EARTH   = 6371000;                 // spherical Earth radius (m) — per spec
+const MAX_ROWS  = 100;
+const DEG       = Math.PI / 180;
+const TIERS     = ['premium', 'medium', 'economic'];
+/* Strict DMS template DD°MM'SS.ss" — extended only with an optional
+   sign / hemisphere letter. Seconds ≥ 60 are accepted (government
+   merge/print typos) and normalized downstream. */
+const DMS_RE    = /^([+-])?(\d{1,3})°(\d{1,2})'(\d{1,2}(?:\.\d+)?)"([NSEW])?$/i;
+const DEC_RE    = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+/* ════════════════════════════════════════════════════════════
+   I18N DICTIONARY
+   ════════════════════════════════════════════════════════════ */
+const STR = {
+  en: {
+    'app.title':'Boundary Proximity Calculator',
+    'app.tag':'Geodetic evidence engine for zoning decree challenges',
+    'station.kicker':'Base Station',
+    'station.tabDD':'User Target · Decimal GPS',
+    'station.tabDMS':'Decree Base · Raw DMS',
+    'field.lat':'Latitude (Y)',
+    'field.lon':'Longitude (X)',
+    'field.dmsX':'DMS X — Longitude',
+    'field.dmsY':'DMS Y — Latitude',
+    'ph.lat':'e.g. 30.044400',
+    'ph.lon':'e.g. 31.235700',
+    'ph.dms':'DD°MM\'SS.ss"  e.g. 31°14\'10.9"',
+    'name.ph':'Block name…',
+    'status.empty':'Awaiting input',
+    'status.valid':'Format valid — locked',
+    'status.norm':'Seconds ≥ 60 auto-corrected (printing typo compensated)',
+    'status.badDMS':'Expected DD°MM\'SS.ss" — e.g. 31°14\'10.9"',
+    'status.badLat':'Latitude must be between −90 and +90',
+    'status.badLon':'Longitude must be between −180 and +180',
+    'status.badHemi':'Hemisphere must match axis — N/S for latitude, E/W for longitude',
+    'conv.dms':'DMS equivalent',
+    'conv.dec':'Decimal equivalent',
+    'decree.dist':'Target ↔ decree base separation',
+    'decree.use':'Set as target',
+    'lock.kicker':'Active Target Station',
+    'matrix.kicker':'Reference Matrix',
+    'matrix.title':'Zone Boundary Proximity Matrix',
+    'matrix.sub':'Up to 100 reference blocks · Haversine great-circle · WGS84 sphere',
+    'btn.add':'Add row',
+    'btn.paste':'Bulk paste',
+    'btn.sample':'Sample decree',
+    'btn.clear':'Clear',
+    'btn.run':'Run Proximity Analysis',
+    'btn.export':'Export Case Evidence (.CSV)',
+    'th.rank':'#',
+    'th.block':'Block / Mantiqah',
+    'th.tier':'Tier',
+    'th.dmsX':'DMS X · Lon',
+    'th.dmsY':'DMS Y · Lat',
+    'th.dist':'Distance (m)',
+    'tier.premium':'Premium',
+    'tier.medium':'Medium',
+    'tier.economic':'Economic',
+    'verdict.kicker':'Winning Indicator',
+    'verdict.title':'Administrative Zone Anchor',
+    'verdict.sub':'Nearest reference block to the target station — least proximity zone',
+    'verdict.dist':'Absolute geodetic distance',
+    'verdict.unit':'meters',
+    'verdict.chart':'Distance distribution · sorted ascending',
+    'verdict.none':'No reference blocks yet. Add rows or bulk-paste your decree annex, then run the analysis.',
+    'verdict.await':'Reference blocks loaded. Run the analysis to reveal the winning zone.',
+    'target.required':'A valid user target (decimal GPS) is required before analysis.',
+    'rows.invalid':'Fix the highlighted DMS cells before running the analysis.',
+    'paste.hint':'One block per line: Name ⇥ Tier ⇥ DMS X ⇥ DMS Y — tab or “|” separated. Tier accepts Premium / Medium / Economic or متميز / متوسط / اقتصادي.',
+    'paste.apply':'Parse & Append',
+    'paste.cancel':'Cancel',
+    'paste.result':'Added {n} row(s) · skipped {m}',
+    'csv.anchor':'PRIMARY ANCHOR',
+    'csv.ref':'REFERENCE',
+    'winner.badge':'ANCHOR',
+    'empty.rows':'Matrix empty — add rows manually or bulk-paste your decree annex.',
+    'tt.del':'Remove row',
+    'tt.theme':'Toggle dark / light mode',
+    'tt.full':'Matrix full — 100 rows max',
+    'foot.note':'Distances are computed client-side with the Haversine formula over a spherical Earth (R = 6,371,000 m) and are indicative. Submit certified survey exhibits for court filing.',
+    'meta.sorted':'blocks sorted by proximity'
+  },
+  ar: {
+    'app.title':'الحاسبة لتقارب الحدود',
+    'app.tag':'محرك أدلة جيوديسي',
+    'station.kicker':'المحطة المرجعية',
+    'station.tabDD':'هدف المستخدم · GPS عشري',
+    'station.tabDMS':'أساس القرار · DMS خام',
+    'field.lat':'خط العرض (Y)',
+    'field.lon':'خط الطول (X)',
+    'field.dmsX':'DMS X — خط الطول',
+    'field.dmsY':'DMS Y — خط العرض',
+    'ph.lat':'مثال 30.044400',
+    'ph.lon':'مثال 31.235700',
+    'ph.dms':'DD°MM\'SS.ss"  مثال 31°14\'10.9"',
+    'name.ph':'اسم البلوك…',
+    'status.empty':'بانتظار الإدخال',
+    'status.valid':'الصيغة صالحة — مُثبت',
+    'status.norm':'تم تصحيح الثواني ≥ 60 تلقائيًا (خطأ مطبعي في المستند)',
+    'status.badDMS':'الصيغة المطلوبة DD°MM\'SS.ss" — مثال 31°14\'10.9"',
+    'status.badLat':'خط العرض يجب أن يكون بين −90 و +90',
+    'status.badLon':'خط الطول يجب أن يكون بين −180 و +180',
+    'status.badHemi': 'حرف الاتجاه يجب أن يطابق المحور — N/S لخط العرض وE/W لخط الطول',
+    'conv.dms':'مكافئ DMS',
+    'conv.dec':'المكافئ العشري',
+    'decree.dist':'المسافة بين الهدف وأساس القرار',
+    'decree.use':'اعتماده كهدف',
+    'lock.kicker':'محطة الهدف النشطة',
+    'matrix.kicker':'مصفوفة المرجعية',
+    'matrix.title':'مصفوفة تقارب حدود المناطق',
+    'matrix.sub':'حتى 100 بلوك مرجعي · دائرة عظمى (هافرساين) · كرة WGS84',
+    'btn.add':'إضافة صف',
+    'btn.paste':'لصق جماعي',
+    'btn.sample':'قرار تجريبي',
+    'btn.clear':'مسح',
+    'btn.run':'تشغيل تحليل التقارب',
+    'btn.export':'تصدير أدلة القضية (CSV)',
+    'th.rank':'#',
+    'th.block':'البلوك / المنطقة',
+    'th.tier':'التصنيف',
+    'th.dmsX':'DMS X · طول',
+    'th.dmsY':'DMS Y · عرض',
+    'th.dist':'المسافة (م)',
+    'tier.premium':'متميز',
+    'tier.medium':'متوسط',
+    'tier.economic':'اقتصادي',
+    'verdict.kicker':'المؤشر الفائز',
+    'verdict.title':'مرتكز المنطقة الإدارية',
+    'verdict.sub':'أقرب بلوك مرجعي إلى محطة الهدف — منطقة أدنى تقارب',
+    'verdict.dist':'المسافة الجيوديسية المطلقة',
+    'verdict.unit':'مترًا',
+    'verdict.chart':'توزيع المسافات · تصاعديًا',
+    'verdict.none':'لا توجد بلوكات مرجعية بعد. أضف صفوفًا أو الصق مرفق القرار جماعيًا ثم شغّل التحليل.',
+    'verdict.await':'تم تحميل البلوكات المرجعية. شغّل التحليل للكشف عن المنطقة الفائزة.',
+    'target.required':'يلزم هدف مستخدم صالح (GPS عشري) قبل التحليل.',
+    'rows.invalid':'صحح خلايا DMS المُعلّمة قبل تشغيل التحليل.',
+    'paste.hint':'بلوك واحد في كل سطر: الاسم ⇥ التصنيف ⇥ DMS X ⇥ DMS Y — بفاصل تاب أو «|». التصنيف: متميز / متوسط / اقتصادي أو Premium / Medium / Economic.',
+    'paste.apply':'تحليل وإلحاق',
+    'paste.cancel':'إلغاء',
+    'paste.result':'أُضيف {n} صف · تُجوهل {m}',
+    'csv.anchor':'المرتكز الأساسي',
+    'csv.ref':'مرجع',
+    'winner.badge':'المرتكز',
+    'empty.rows':'المصفوفة فارغة — أضف صفوفًا يدويًا أو الصق مرفق القرار جماعيًا.',
+    'tt.del':'حذف الصف',
+    'tt.theme':'تبديل الوضع الداكن / الفاتح',
+    'tt.full':'المصفوفة ممتلئة — 100 صف كحد أقصى',
+    'foot.note':'تُحسب المسافات محليًا بصيغة هافرساين على كرة الأرض (R = 6,371,000 م) وهي قيم استرشادية؛ يُقدَّم للمحكمة رفع مساحي معتمد.',
+    'meta.sorted':'بلوك مرتّبة حسب التقارب'
+  }
+};
+
+/* ════════════════════════════════════════════════════════════
+   DOM HELPERS + STATE
+   ════════════════════════════════════════════════════════════ */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const root = document.documentElement;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let lang = 'en';
+let fmt  = null;                       // locale number formatter (rebuilt per language)
+const t  = k => (STR[lang][k] !== undefined ? STR[lang][k] : (STR.en[k] !== undefined ? STR.en[k] : k));
+
+const state = {
+  rows: [],                            // row model objects
+  seq: 0,
+  analyzed: false,
+  winner: null,
+  sorted: [],                          // rows in ascending-distance order (last analysis)
+  target: { lat: NaN, lon: NaN, ok: false },
+  decree: { x: NaN, y: NaN, okX: false, okY: false }
+};
+const rowMap  = new Map();             // id → row (O(1) delegation lookups)
+const distBuf = new Float64Array(MAX_ROWS);   // pre-allocated distance buffer
+const orderBuf = new Uint16Array(MAX_ROWS);   // pre-allocated sort-index buffer
+for (let i = 0; i < MAX_ROWS; i++) orderBuf[i] = i;
+
+/* Memoized DMS → decimal conversion cache */
+const dmsMemo = new Map();
+
+/* ════════════════════════════════════════════════════════════
+   MATH ENGINE
+   ════════════════════════════════════════════════════════════ */
+function haversineM(lat1, lon1, lat2, lon2) {
+  const p1 = lat1 * DEG, p2 = lat2 * DEG;
+  const dp = (lat2 - lat1) * DEG, dl = (lon2 - lon1) * DEG;
+  const s1 = Math.sin(dp / 2), s2 = Math.sin(dl / 2);
+  const a  = s1 * s1 + Math.cos(p1) * Math.cos(p2) * s2 * s2;
+  return 2 * R_EARTH * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/* Parse a raw DMS string. Returns {ok, dec, norm, msg}. Memoized. */
+function parseDMS(raw, axis) {
+  const s = String(raw == null ? '' : raw).trim();
+  const key = axis + '|' + s;
+  const hit = dmsMemo.get(key);
+  if (hit) return hit;
+
+  const out = { ok: false, dec: NaN, norm: false, msg: 'empty' };
+  if (s) {
+    const m = DMS_RE.exec(s);
+    if (!m) {
+      out.msg = 'format';
+    } else {
+      const sign  = m[1] === '-' ? -1 : 1;
+      let   d     = parseInt(m[2], 10);
+      let   min   = parseInt(m[3], 10);
+      let   sec   = parseFloat(m[4]);
+      const hemi  = (m[5] || '').toUpperCase();
+      const limit = axis === 'lat' ? 90 : 180;
+      const hemiOk = !hemi || (axis === 'lat' ? hemi === 'N' || hemi === 'S'
+                                              : hemi === 'E' || hemi === 'W');
+
+      if (!hemiOk) {
+        out.msg = 'hemi';
+      } else if (d > limit) {
+        out.msg = 'range';
+      } else {
+        if (sec >= 60) {                    // compensate document typos
+          const carry = Math.floor(sec / 60);
+          min += carry; sec -= carry * 60; out.norm = true;
+        }
+        if (min >= 60) {
+          d += Math.floor(min / 60); min = min % 60; out.norm = true;
+        }
+        const hemiSign = (hemi === 'S' || hemi === 'W') ? -1 : 1;
+        const dec = sign * hemiSign * (d + min / 60 + sec / 3600);
+        if (Math.abs(dec) > limit) { out.msg = 'range'; }
+        else { out.ok = true; out.dec = dec; }
+      }
+    }
+  }
+  if (dmsMemo.size > 4000) dmsMemo.clear();
+  dmsMemo.set(key, out);
+  return out;
+}
+
+/* Decimal → DMS string, e.g. 31°14'10.90"E */
+function decToDMS(dec, axis) {
+  const hemi = axis === 'lat' ? (dec >= 0 ? 'N' : 'S') : (dec >= 0 ? 'E' : 'W');
+  const a = Math.abs(dec);
+  let d = Math.floor(a);
+  const minF = (a - d) * 60;
+  let min = Math.floor(minF);
+  let sec = (minF - min) * 60;
+  if (sec >= 59.995) { sec = 0; min++; }
+  if (min >= 60)     { min = 0; d++; }
+  return d + '°' + String(min).padStart(2, '0') + "'" + sec.toFixed(2).padStart(5, '0') + '"' + hemi;
+}
+
+function parseDec(s, limit) {
+  const str = String(s).trim();
+  if (!DEC_RE.test(str)) return { v: NaN, ok: false };
+  const v = Number(str);
+  const ok = Math.abs(v) <= limit;
+  return { v: ok ? v : NaN, ok };
+}
+
+const unitStr = () => (lang === 'ar' ? ' م' : ' m');
+
+/* ════════════════════════════════════════════════════════════
+   I18N + THEME APPLICATION
+   ════════════════════════════════════════════════════════════ */
+function syncTierLabels(sel) {
+  TIERS.forEach(k => {
+    const opt = sel.querySelector('option[value="' + k + '"]');
+    if (opt) opt.textContent = t('tier.' + k);
+  });
+}
+
+function applyLang(next) {
+  if (next) lang = next;
+  root.lang = lang;
+  root.dir  = lang === 'ar' ? 'rtl' : 'ltr';
+  document.title = t('app.title');
+  fmt = new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US',
+        { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  $$('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  $$('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  $$('.cell-select').forEach(syncTierLabels);
+
+  $('#langEn').classList.toggle('active', lang === 'en');
+  $('#langAr').classList.toggle('active', lang === 'ar');
+
+  tickClock();
+  refreshAllReadouts();
+  updateVerdictState();
+  if (state.analyzed) renderVerdict();
+  try { localStorage.setItem('lbpc-lang', lang); } catch (e) {}
+}
+
+function applyTheme(mode) {
+  root.dataset.theme = mode;
+  try { localStorage.setItem('lbpc-theme', mode); } catch (e) {}
+}
+
+/* ════════════════════════════════════════════════════════════
+   FIELD VALIDATION — BASE STATION
+   ════════════════════════════════════════════════════════════ */
+function setFieldState(input, msgEl, stateKey, msgText) {
+  input.classList.remove('ok', 'err');
+  msgEl.classList.remove('ok', 'err', 'norm');
+  if (stateKey === 'ok')       { input.classList.add('ok');  msgEl.classList.add('ok'); }
+  else if (stateKey === 'norm'){ input.classList.add('ok');  msgEl.classList.add('norm'); }
+  else if (stateKey === 'err') { input.classList.add('err'); msgEl.classList.add('err'); }
+  msgEl.textContent = msgText;
+}
+
+function validateTarget() {
+  const latIn = $('#latDD'), lonIn = $('#lonDD');
+  const lat = parseDec(latIn.value, 90);
+  const lon = parseDec(lonIn.value, 180);
+
+  state.target = { lat: lat.v, lon: lon.v, ok: lat.ok && lon.ok };
+
+  if (!latIn.value.trim())      setFieldState(latIn, $('#latMsg'), 'idle', t('status.empty'));
+  else if (lat.ok)              setFieldState(latIn, $('#latMsg'), 'ok',   t('status.valid'));
+  else                          setFieldState(latIn, $('#latMsg'), 'err',  t('status.badLat'));
+
+  if (!lonIn.value.trim())      setFieldState(lonIn, $('#lonMsg'), 'idle', t('status.empty'));
+  else if (lon.ok)              setFieldState(lonIn, $('#lonMsg'), 'ok',   t('status.valid'));
+  else                          setFieldState(lonIn, $('#lonMsg'), 'err',  t('status.badLon'));
+
+  $('#latDMSOut').textContent = lat.ok ? decToDMS(lat.v, 'lat') : '—';
+  $('#lonDMSOut').textContent = lon.ok ? decToDMS(lon.v, 'lon') : '—';
+
+  $('#lockDD').textContent  = state.target.ok
+    ? state.target.lat.toFixed(6) + '°, ' + state.target.lon.toFixed(6) + '°' : '—';
+  $('#lockDMS').textContent = state.target.ok
+    ? decToDMS(state.target.lat, 'lat') + '  ·  ' + decToDMS(state.target.lon, 'lon') : '—';
+
+  $('#runBtn').disabled = !state.target.ok;
+  updateDecreeDist();
+  scheduleRecalc();
+}
+
+function validateDecree() {
+  const xIn = $('#decX'), yIn = $('#decY');
+  const rx = parseDMS(xIn.value, 'lon');
+  const ry = parseDMS(yIn.value, 'lat');
+
+  state.decree = { x: rx.dec, y: ry.dec, okX: rx.ok, okY: ry.ok };
+
+  const mapState = (r, raw) => !raw.trim() ? 'idle' : (r.ok ? (r.norm ? 'norm' : 'ok') : 'err');
+  const mapMsg   = (r, raw) => !raw.trim() ? t('status.empty')
+                              : (r.ok ? (r.norm ? t('status.norm') : t('status.valid'))
+                                      : t('status.badDMS'));
+
+  setFieldState(xIn, $('#decXMsg'), mapState(rx, xIn.value), dmsMsg(rx, xIn.value));
+  setFieldState(yIn, $('#decYMsg'), mapState(ry, yIn.value), dmsMsg(ry, yIn.value));
+
+  $('#decXOut').textContent = rx.ok ? rx.dec.toFixed(6) + '°' : '—';
+  $('#decYOut').textContent = ry.ok ? ry.dec.toFixed(6) + '°' : '—';
+
+  $('#useDecree').disabled = !(rx.ok && ry.ok);
+  $('#decreeCard').classList.toggle('live', rx.ok && ry.ok);
+  updateDecreeDist();
+}
+
+function updateDecreeDist() {
+  const el = $('#decreeDist');
+  if (state.decree.okX && state.decree.okY && state.target.ok) {
+    const d = haversineM(state.target.lat, state.target.lon, state.decree.y, state.decree.x);
+    el.textContent = fmt.format(d) + unitStr();
+  } else {
+    el.textContent = '—';
+  }
+}
+
+function refreshAllReadouts() {
+  validateTarget();
+  validateDecree();
+  state.rows.forEach(r => validateRow(r));
+}
+
+/* ════════════════════════════════════════════════════════════
+   MATRIX ROWS — creation, validation, delegation
+   ════════════════════════════════════════════════════════════ */
+const tpl   = $('#rowTpl');
+const tbody = $('#matrixBody');
+
+function addRow(data) {
+  data = data || {};
+  if (state.rows.length >= MAX_ROWS) { toast(t('tt.full')); return null; }
+
+  const tr  = tpl.content.firstElementChild.cloneNode(true);
+  const row = {
+    id:   ++state.seq,
+    el:   tr,
+    name: String(data.name || ''),
+    tier: TIERS.indexOf(data.tier) >= 0 ? data.tier : 'medium',
+    dmsX: String(data.dmsX || ''),
+    dmsY: String(data.dmsY || ''),
+    decX: NaN, decY: NaN,
+    okX: false, okY: false,
+    dist: Number.MAX_VALUE
+  };
+  tr.dataset.id = row.id;
+
+  const nameIn = tr.querySelector('[data-field="name"]');
+  const tierSel = tr.querySelector('[data-field="tier"]');
+  nameIn.value = row.name;
+  tierSel.value = row.tier;
+  syncTierLabels(tierSel);
+  tr.querySelector('[data-field="dmsX"]').value = row.dmsX;
+  tr.querySelector('[data-field="dmsY"]').value = row.dmsY;
+
+  tbody.appendChild(tr);
+  state.rows.push(row);
+  rowMap.set(row.id, row);
+
+  validateRow(row);
+  renderCounter();
+  toggleEmpty();
+  return row;
+}
+
+function validateRow(row) {
+  const el = row.el;
+  const xi = el.querySelector('[data-field="dmsX"]');
+  const yi = el.querySelector('[data-field="dmsY"]');
+  const rx = parseDMS(row.dmsX, 'lon');
+  const ry = parseDMS(row.dmsY, 'lat');
+
+  row.okX = rx.ok; row.okY = ry.ok;
+  row.decX = rx.dec; row.decY = ry.dec;
+
+  xi.classList.toggle('err', !rx.ok && row.dmsX.trim() !== '');
+  yi.classList.toggle('err', !ry.ok && row.dmsY.trim() !== '');
+
+  setDot(el.querySelector('[data-dot="x"]'), rx, row.dmsX);
+  setDot(el.querySelector('[data-dot="y"]'), ry, row.dmsY);
+  el.querySelector('[data-read="x"]').textContent = rx.ok ? rx.dec.toFixed(6) + '°' : '——';
+  el.querySelector('[data-read="y"]').textContent = ry.ok ? ry.dec.toFixed(6) + '°' : '——';
+  el.classList.toggle('invalid', state.analyzed && !(rx.ok && ry.ok));
+}
+
+function dmsMsg(res, raw) {
+  if (!raw.trim()) return t('status.empty');
+  if (res.ok) return res.norm ? t('status.norm') : t('status.valid');
+  return res.msg === 'hemi' ? t('status.badHemi') : t('status.badDMS');
+}
+
+function setDot(dot, res, raw) {
+  const cls = !raw.trim() ? 'idle' : res.ok ? (res.norm ? 'norm' : 'ok') : 'err';
+  dot.className = 'dot ' + cls;
+  dot.title = dmsMsg(res, raw);
+}
+
+function rowFromEl(el) {
+  const tr = el.closest('tr');
+  return tr ? rowMap.get(Number(tr.dataset.id)) : null;
+}
+
+function removeRow(row) {
+  if (!row) return;
+  row.el.classList.add('leaving');
+  setTimeout(() => row.el.remove(), 180);
+  state.rows = state.rows.filter(r => r !== row);
+  rowMap.delete(row.id);
+  renderCounter();
+  toggleEmpty();
+  if (state.rows.length === 0) {
+    state.analyzed = false; state.winner = null; state.sorted = [];
+    $('#runMeta').textContent = '';
+    updateVerdictState();
+  } else {
+    scheduleRecalc();
+  }
+}
+
+function clearRows() {
+  state.rows.forEach(r => r.el.remove());
+  state.rows = [];
+  rowMap.clear();
+  state.analyzed = false; state.winner = null; state.sorted = [];
+  $('#runMeta').textContent = '';
+  renderCounter();
+  toggleEmpty();
+  updateVerdictState();
+}
+
+function renderCounter() {
+  $('#rowCount').textContent = state.rows.length + ' / ' + MAX_ROWS;
+  const full = state.rows.length >= MAX_ROWS;
+  $('#addRowBtn').disabled = full;
+  $('#addRowBtn').title = full ? t('tt.full') : '';
+}
+
+function toggleEmpty() {
+  $('#emptyState').hidden = state.rows.length > 0;
+}
+
+/* — single delegated listeners for the whole grid (≤100 rows) — */
+tbody.addEventListener('input', e => {
+  const f = e.target.dataset.field;
+  if (!f) return;
+  const row = rowFromEl(e.target);
+  if (!row) return;
+  if (f === 'name')      row.name = e.target.value;
+  else if (f === 'dmsX') { row.dmsX = e.target.value; validateRow(row); }
+  else if (f === 'dmsY') { row.dmsY = e.target.value; validateRow(row); }
+  scheduleRecalc();
+});
+tbody.addEventListener('change', e => {
+  if (e.target.dataset.field === 'tier') {
+    const row = rowFromEl(e.target);
+    if (row) row.tier = e.target.value;
+  }
+});
+tbody.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act="del"]');
+  if (btn) removeRow(rowFromEl(btn));
+});
+tbody.addEventListener('animationend', e => {
+  if (e.target.classList && e.target.classList.contains('flash')) e.target.classList.remove('flash');
+});
+
+/* ════════════════════════════════════════════════════════════
+   CORE ANALYSIS — Haversine sweep, sort, winner highlight
+   ════════════════════════════════════════════════════════════ */
+let recalcTimer = 0;
+function scheduleRecalc() {
+  if (!state.analyzed) return;
+  clearTimeout(recalcTimer);
+  recalcTimer = setTimeout(() => runAnalysis(true), 160);
+}
+
+function runAnalysis(silent) {
+  if (!state.target.ok) {
+    if (!silent) {
+      toast(t('target.required'));
+      const lock = $('#lockCard');
+      lock.classList.remove('shake'); void lock.offsetWidth; lock.classList.add('shake');
+    }
+    return;
+  }
+  const n = state.rows.length;
+  if (!n) return;
+
+  let anyValid = false;
+  for (let i = 0; i < n; i++) {
+    const r = state.rows[i];
+    validateRow(r);
+    if (r.okX && r.okY) {
+      distBuf[i] = haversineM(state.target.lat, state.target.lon, r.decY, r.decX);
+      anyValid = true;
+    } else {
+      distBuf[i] = Number.MAX_VALUE;
+    }
+  }
+  if (!anyValid) {
+    if (!silent) toast(t('rows.invalid'));
+    return;
+  }
+
+  /* sort pre-allocated index buffer ascending over distances.
+     Re-seed first: after rows are added/removed, a stale permutation
+     from a previous pass can point outside state.rows. */
+  const view = orderBuf.subarray(0, n);
+  for (let i = 0; i < n; i++) view[i] = i;
+  view.sort((a, b) =>
+    (distBuf[a] === Number.MAX_VALUE ? 1 : 0) - (distBuf[b] === Number.MAX_VALUE ? 1 : 0) ||
+    distBuf[a] - distBuf[b] || a - b);
+
+  /* reorder DOM in one batched pass (no layout thrash) */
+  const frag = document.createDocumentFragment();
+  state.sorted = [];
+  for (let rank = 0; rank < n; rank++) {
+    const r = state.rows[view[rank]];
+    r.dist = distBuf[view[rank]];
+    r.el.classList.toggle('winner', rank === 0 && r.dist !== Number.MAX_VALUE);
+    r.el.classList.toggle('invalid', !(r.okX && r.okY));
+    r.el.querySelector('.rank').textContent = rank + 1;
+    const dcell = r.el.querySelector('[data-dist]');
+    dcell.textContent = r.dist !== Number.MAX_VALUE ? fmt.format(r.dist) : '—';
+    dcell.classList.remove('flash'); void dcell.offsetWidth; dcell.classList.add('flash');
+    frag.appendChild(r.el);
+    state.sorted.push(r);
+  }
+  tbody.appendChild(frag);
+
+  state.analyzed = true;
+  state.winner = state.sorted[0].dist !== Number.MAX_VALUE ? state.sorted[0] : null;
+  $('#runMeta').textContent = n + ' ' + t('meta.sorted');
+  updateVerdictState();
+  renderVerdict();
+}
+
+function updateVerdictState() {
+  const has = state.rows.length > 0;
+  const showCard = state.analyzed && state.winner;
+  $('#verdictCard').hidden = !showCard;
+  const empty = $('#verdictEmpty');
+  empty.hidden = showCard;
+  if (!showCard) empty.textContent = has ? t('verdict.await') : t('verdict.none');
+}
+
+function renderVerdict() {
+  if (!state.analyzed || !state.winner) return;
+  const w = state.winner;
+
+  $('#vName').textContent = w.name.trim() || '—';
+  const chip = $('#vTier');
+  chip.textContent = t('tier.' + w.tier);
+  chip.className = 'tier-chip tier-' + w.tier;
+  $('#vDist').textContent = fmt.format(w.dist);
+  $('#vCoords').textContent = w.decY.toFixed(6) + '°, ' + w.decX.toFixed(6) + '°';
+  $('#vDMS').textContent = 'X ' + (w.dmsX.trim() || '—') + '   ·   Y ' + (w.dmsY.trim() || '—');
+
+  /* distance distribution bars */
+  const finite = state.sorted.filter(r => r.dist !== Number.MAX_VALUE);
+  const maxD = finite.length ? finite[finite.length - 1].dist : w.dist;
+  let html = '';
+  for (const r of finite) {
+    const pct = Math.max(4, (r.dist / maxD) * 100);
+    html += '<div class="bar-row' + (r === w ? ' win' : '') + '">' +
+              '<span class="bar-name">' + esc(r.name.trim() || '—') + '</span>' +
+              '<span class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
+              '<span class="bar-val">' + fmt.format(r.dist) + '</span>' +
+            '</div>';
+  }
+  $('#chart').innerHTML = html;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CSV EXPORT — UTF-8 BOM, Excel-safe Arabic
+   ════════════════════════════════════════════════════════════ */
+function exportCSV() {
+  if (!state.analyzed) { runAnalysis(false); if (!state.analyzed) return; }
+
+  const head = ['Block Name','Original DMS X','Original DMS Y','Dec Lat','Dec Lon',
+                'Distance (Meters)','Tier Classification','Proximity Verdict'];
+  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = state.sorted.map((r, i) => {
+    const verdict = (i === 0 && r.dist !== Number.MAX_VALUE)
+      ? t('csv.anchor')
+      : t('csv.ref') + ' #' + (i + 1);
+    return [
+      r.name.trim() || '—',
+      r.dmsX.trim(),
+      r.dmsY.trim(),
+      r.okY ? r.decY.toFixed(6) : 'INVALID',
+      r.okX ? r.decX.toFixed(6) : 'INVALID',
+      r.dist !== Number.MAX_VALUE ? r.dist.toFixed(1) : 'N/A',
+      t('tier.' + r.tier),
+      verdict
+    ];
+  });
+  const csv = '\uFEFF' + [head].concat(lines).map(row => row.map(q).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'boundary-proximity-evidence.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 600);
+}
+
+/* ════════════════════════════════════════════════════════════
+   BULK PASTE PARSER
+   ════════════════════════════════════════════════════════════ */
+function normTier(s) {
+  s = String(s || '').trim().toLowerCase();
+  if (/متميز|premium|prem|^1$/.test(s)) return 'premium';
+  if (/متوسط|medium|med|^2$/.test(s))   return 'medium';
+  if (/اقتصادي|economic|econ|^3$/.test(s)) return 'economic';
+  return 'medium';
+}
+
+function parseBulk(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let added = 0, skipped = 0;
+  for (const line of lines) {
+    const parts = line.indexOf('\t') >= 0
+      ? line.split(/\t+/).map(p => p.trim())
+      : line.split(/\s*\|\s*/).map(p => p.trim());
+    if (parts.length >= 4) {
+      addRow({ name: parts[0], tier: normTier(parts[1]), dmsX: parts[2], dmsY: parts[3] });
+      added++;
+    } else if (parts.length === 3) {
+      addRow({ name: parts[0], tier: 'medium', dmsX: parts[1], dmsY: parts[2] });
+      added++;
+    } else {
+      skipped++;
+    }
+  }
+  return { added, skipped };
+}
+
+/* ════════════════════════════════════════════════════════════
+   SAMPLE DECREE DATA (Cairo annex — includes a seconds>60 typo row)
+   ════════════════════════════════════════════════════════════ */
+function loadSample() {
+  clearRows();
+  $('#latDD').value = '30.044400';
+  $('#lonDD').value = '31.235700';
+  validateTarget();
+  $('#decX').value = '31°14\'10.90"';
+  $('#decY').value = '30°02\'39.80"';
+  validateDecree();
+
+  const S = [
+    ['Mantiqah A ', 'premium',  '31°14\'10.90"', '30°02\'39.80"'],
+    ['Block 7',     'medium',   '31°14\'25.00"', '30°02\'10.00"'],
+    ['Mantiqah B',  'premium',  '31°13\'15.00"', '30°03\'30.00"'],
+    ['Block 12',    'economic', '31°14\'45.00"', '30°02\'30.00"'],
+    ['Mantiqah C',  'medium',   '31°14\'50.70"', '30°02\'52.00"'],
+    ['Block 3',     'economic', '31°13\'50.00"', '30°03\'10.00"']
+  ];
+  S.forEach(r => addRow({ name: r[0], tier: r[1], dmsX: r[2], dmsY: r[3] }));
+  runAnalysis(false);
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOAST · CLOCK · MICROS
+   ════════════════════════════════════════════════════════════ */
+let toastTimer = 0;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function tickClock() {
+  $('#clock').textContent = new Date().toLocaleTimeString(
+    lang === 'ar' ? 'ar-EG' : 'en-GB',
+    { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
+function insertAtCursor(input, sym) {
+  const s = input.selectionStart == null ? input.value.length : input.selectionStart;
+  const e = input.selectionEnd == null ? s : input.selectionEnd;
+  input.value = input.value.slice(0, s) + sym + input.value.slice(e);
+  input.focus();
+  input.selectionStart = input.selectionEnd = s + sym.length;
+}
+
+/* ════════════════════════════════════════════════════════════
+   WIRING
+   ════════════════════════════════════════════════════════════ */
+function init() {
+  /* theme + language boot */
+  let savedTheme = null, savedLang = null;
+  try {
+    savedTheme = localStorage.getItem('lbpc-theme');
+    savedLang  = localStorage.getItem('lbpc-lang');
+  } catch (e) {}
+  applyTheme(savedTheme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+
+  $('#themeBtn').addEventListener('click', () =>
+    applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+  $('#langEn').addEventListener('click', () => applyLang('en'));
+  $('#langAr').addEventListener('click', () => applyLang('ar'));
+
+  /* tabs */
+  $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+    $$('.tab-btn').forEach(b => {
+      const on = b === btn;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('.pane').forEach(p => p.classList.toggle('active', p.id === btn.dataset.pane));
+  }));
+
+  /* station inputs */
+  $('#latDD').addEventListener('input', validateTarget);
+  $('#lonDD').addEventListener('input', validateTarget);
+  $('#decX').addEventListener('input', validateDecree);
+  $('#decY').addEventListener('input', validateDecree);
+
+  /* symbol quick-insert */
+  $$('.sym').forEach(b => b.addEventListener('click', () => {
+    const inp = document.getElementById(b.dataset.for);
+    insertAtCursor(inp, b.dataset.sym);
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+  }));
+
+  /* decree → target */
+  $('#useDecree').addEventListener('click', () => {
+    if (!(state.decree.okX && state.decree.okY)) return;
+    $('#latDD').value = state.decree.y.toFixed(6);
+    $('#lonDD').value = state.decree.x.toFixed(6);
+    validateTarget();
+    $$('.tab-btn').forEach(b => {
+      const on = b.dataset.pane === 'paneDD';
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('.pane').forEach(p => p.classList.toggle('active', p.id === 'paneDD'));
+    const lock = $('#lockCard');
+    lock.classList.remove('shake'); void lock.offsetWidth; lock.classList.add('shake');
+  });
+
+  /* toolbar */
+  $('#addRowBtn').addEventListener('click', () => { const r = addRow(); if (r) r.el.querySelector('[data-field="name"]').focus(); });
+  $('#clearBtn').addEventListener('click', clearRows);
+  $('#sampleBtn').addEventListener('click', loadSample);
+
+  const drawer = $('#pasteDrawer');
+  $('#pasteBtn').addEventListener('click', () => {
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) $('#pasteBox').focus();
+  });
+  $('#pasteCancel').addEventListener('click', () => drawer.classList.remove('open'));
+  $('#pasteApply').addEventListener('click', () => {
+    const res = parseBulk($('#pasteBox').value);
+    $('#pasteResult').textContent =
+      t('paste.result').replace('{n}', res.added).replace('{m}', res.skipped);
+    if (res.added) { $('#pasteBox').value = ''; scheduleRecalc(); }
+  });
+  $('#pasteBox').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') $('#pasteApply').click();
+  });
+
+  /* analysis + export */
+  $('#runBtn').addEventListener('click', () => runAnalysis(false));
+  $('#exportBtn').addEventListener('click', exportCSV);
+
+  /* clock */
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  /* scroll reveal */
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+    }), { threshold: 0.08 });
+    $$('.reveal').forEach(el => io.observe(el));
+  } else {
+    $$('.reveal').forEach(el => el.classList.add('in'));
+  }
+
+  /* first paint: localized UI + demo decree annex */
+  applyLang(savedLang === 'ar' ? 'ar' : 'en');
+  loadSample();
+}
+
+init();
+})();
+</script>
+</body>
+</html>
