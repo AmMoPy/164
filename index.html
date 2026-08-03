@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Point Based Proximity Dashboard — geodetic evidence engine. Vincenty + Haversine · IDW tier verdict · WGS84." />
+<meta name="description" content="Spatial Inference Engine" />
 <title>PP-ME</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
   --surface:#ffffff; --surface2:#eef2f7;
   --ink:#0f1621; --ink2:#57667c; --geoink:#b1c4e3;
   --line:#d3dbe6; --line2:#b3c0d1;
-  --accent:#1c4d74; --accent-soft:rgba(28,77,116,.10); --on-accent:#ffffff; --geoaccent:#00ffff;
+  --accent:#1c4d74; --accent-soft:rgba(28,77,116,.10); --on-accent:#ffffff; --geoaccent:#ff0000;
   --gold:#8f6423; --gold-bright:#c98a2e;
   --ok:#1b7a56; --ok-soft:rgba(27,122,86,.12);
   --err:#b23b2e; --err-soft:rgba(178,59,46,.10);
@@ -415,7 +415,7 @@ html[lang="en"] .bd-divider{letter-spacing:.08em}
 .gp-legend{display:flex;flex-wrap:wrap;gap:11px;margin-top:8px;padding:6px 2px;font-size:10.5px;color:var(--ink2)}
 .gp-lg-item{display:inline-flex;align-items:center;gap:5px}
 .gp-lg-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}
-.gp-lg-dot.gp-lg-you{border-radius:2px;transform:rotate(45deg)}
+.gp-lg-dot.gp-lg-you{border-radius:50%}
 .gp-lg-line{width:14px;height:0;border-top:1.5px dashed var(--ink2);display:inline-block}
 
 .gp-empty{display:flex;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;
@@ -734,7 +734,7 @@ html[lang="en"] .gp-badge{letter-spacing:.06em}
                 <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--gold-bright)"></i><span data-i18n="tier.premium"></span></span>
                 <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--info)"></i><span data-i18n="tier.medium"></span></span>
                 <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--gray)"></i><span data-i18n="tier.economic"></span></span>
-                <span class="gp-lg-item"><i class="gp-lg-dot gp-lg-you" style="background:var(--accent)"></i><span data-i18n="geo.you"></span></span>
+                <span class="gp-lg-item"><i class="gp-lg-dot gp-lg-you" style="background:var(--geoaccent)"></i><span data-i18n="geo.you"></span></span>
                 <span class="gp-lg-item"><i class="gp-lg-line"></i><span data-i18n="geo.legendProof"></span></span>
               </div>             
               <div class="gp-canvas-wrap"><canvas id="gpCanvas"></canvas></div>
@@ -823,7 +823,7 @@ const LOC_MAX_TRUST_M = 100;
 /* ════════════════════ I18N ════════════════════ */
 const STR = {
 en:{
-'app.title':'PP-ME','app.tag':'GPS/DMS Point Based Proximity Dashboard',
+'app.title':'PP-ME','app.tag':'GPS/DMS Spatial Inference Engine',
 'step1.label':'Location','step2.label':'Reference zones','step3.label':'Verdict',
 'step1.kicker':'Coordinates', 'step1.sub':"The origin of every proximity measurement.",
 'step2.kicker':'Zone proximity matrix', 'step2.sub':'Up to 100 reference blocks · Distance: Vincenty ellipsoidal (primary) + Haversine spherical (reference).',
@@ -1874,12 +1874,12 @@ function buildGeoJSON(){
   if(state.target.ok){
     features.push({type:'Feature',geometry:{type:'Point',coordinates:[state.target.lon,state.target.lat]},
       properties:{role:'target',name:t('geojson.target'),lat_dms:decToDMS(state.target.lat,'lat'),lon_dms:decToDMS(state.target.lon,'lon'),
-        'marker-color':'#1c4d74','marker-symbol':'star'}});
+        'marker-color':cssVar('--geoaccent'),'marker-symbol':'star'}});
   }
   if(state.decree.okX&&state.decree.okY){
     features.push({type:'Feature',geometry:{type:'Point',coordinates:[state.decree.x,state.decree.y]},
       properties:{role:'decree-base',name:t('geojson.decreeBase'),lat_dms:decToDMS(state.decree.y,'lat'),lon_dms:decToDMS(state.decree.x,'lon'),
-        'marker-color':'#b23b2e','marker-symbol':'flag'}});
+        'marker-color':cssVar('--err'),'marker-symbol':'flag'}});
   }
   state.sorted.forEach((r,i)=>{
     if(!(r.okX&&r.okY))return;

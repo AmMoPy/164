@@ -9,13 +9,13 @@ https://github.com/user-attachments/assets/9d5e15c9-876d-4c58-ab7a-9ef0e13d7f00
 
 </details>
 
-# PinPointMe - GPS/DMS Point Based Proximity Dashboard
+# PinPointMe - Spatial Inference Engine
 
 </div>
 
 > **Built By An Auditor Who Got Tired of Landlords Winning**
 >
-> *"It's a feature request from my landlord"*
+> *"Transforming complex regulatory data into robust compliance framework"*
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 [![No Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)](#)
@@ -27,17 +27,19 @@ https://github.com/user-attachments/assets/9d5e15c9-876d-4c58-ab7a-9ef0e13d7f00
 
 ## .....?
 
-A zero‑dependency, client‑side spatial analytics and regulatory compliance dashboard designed to audit zone classifications under **Cairo Governorate Decree No. 978 of 2026** (published in *El-Waqae' El-Mesriya*, Issue No. 21 Follow‑up). Basically, it's a mathematical middle finger to landlords who try to squeeze you out using blurry maps.
+[PP-ME](https://ammopy.github.io/164/) is a spatial analytics and regulatory compliance engine designed to ensure compliance with zone classification following **Cairo Governorate Decree No. 978 of 2026.** Basically, it's a mathematical middle finger to landlords who try to squeeze you out using blurry maps.
 
-**In English:** [PP-ME](https://ammopy.github.io/164/) takes your building's GPS coordinates, compares them to the official DMS anchors published in the law's text tables, and tells you if you're *actually* near a "Premium Zone" or if your landlord is just gaslighting you with a pixelated PDF.
+**In English:** Takes your building's GPS/DMS coordinates, compares them to the official DMS anchors published in the decree's text tables, and test if your landlord is just gaslighting you with pixelated PDFs.
 
-**In Technical:** A single `index.html` file that computes exact geodetic distances (Vincenty/Haversine) between your target point and the decree's anchor points, that works offline and fits on a floppy disk.
+**In Technical:** A single `index.html` file that computes geodesic distance (Vincenty/Haversine) between your target and the decree's tier coordinates, test for tier exclusion, illustrate tier proximity, works offline and fits on a floppy disk.
 
 **In Therapy Speak:** A coping mechanism for rent control anxiety.
 
 **Perfect for:** Tenants who want to fight back.
 
-**PSST! Want to promote your trash code for free with zero chances of going viral? Check out [FIZX](https://github.com/AmMoPy/FIZX)**
+**Silence that Landlord [164](https://suno.com/s/cHzm2H0msPVBpGo1)**
+
+**Promote your trash code [FIZX](https://github.com/AmMoPy/FIZX)**
 
 ---
 
@@ -48,16 +50,24 @@ Under established Egyptian Administrative Law (*القضاء الإداري بم
 I just made this up!
 
 ### The Problem™
-Cairo's zoning committees drew maps and exported single‑point centroids (anchors) for each zone and labeled them precisely in text tables including their DMS co-ordinates. Each zone is given a category (Premium/Medium/Economic) that dictates rent calculation where Premium is the highest and Economic lowest.
+Cairo's zoning committees classified neighborhoods into zones, supporting the classification by both colored maps and text tables (zone labels and DMS coordinates). Each zone is given a category and color (Premium/Medium/Economic) that dictates rent calculation; "Premium" is the highest and "Economic" lowest.
 
-Due to extreme compression in the official gazette print, map colors bleed and contradicts text table classifications causing identity crises to everyone reading these gazette even the local district engineering departments! Leading to issuing contradicting "Premium Zone" certificates to landlords and "Medium Zone" certificates to tenants for THE EXACT SAME ZONE, relying on blurry maps only while ignoring text schedules and zone/building co-ordinates.
+Map colors bleed and contradicts zone classification referenced in text tables causing identity crises to everyone reading these maps including the local district divisions! This led to issuing conflicting "Premium Zone" certificates to landlords and "Medium Zone" certificates to tenants for THE EXACT SAME BUILDING AND ZONE, relying only on blurry maps while completely ignoring text tables and zone/building coordinates.
 
-This sparked heated debates between Landlords and tenants, so here I am pretending to solve an issue that didn't exist because WHY THE F WE NEED CERTIFICATES WHERE ZONES ARE CLEARLY LABELED AND CATEGORIZED IN THE OFFICIAL GAZETTE!!!!!!
+This sparked heated debates between Landlords and tenants, so here I am pretending to solve an issue that shouldn't even exist because WHY DO WE NEED CERTIFICATES WHEN ZONES ARE CLEARLY LABELED AND CATEGORIZED IN THE OFFICIAL GAZETTE TABLES!
 
-### The Spatial Defense (PP-ME Algorithm)
-PP-ME uses a pure **Point‑to‑Anchor Proximity Matrix**. If a property physically resides tightly within a 200‑meter cluster of a text‑verified **Medium Zone** anchor but sits over 400 meters away from the closest **Premium Zone** anchors, it is mathematically and legally impossible for that property to "overlap" or sit inside a Premium boundary. The straight‑line geodetic distance acts as an ironclad defense, revealing that the visual map discrepancies are clerical typos, not intentional zoning.
+### How PP-ME works (The Spatial Defense Algorithm)
 
-**In other words:** Landlords can't just draw a line on a map and call it "Premium." The law says numbers win. And we have numbers.
+#### Distance From Centroids (Anchor Based Analysis):
+PP-ME uses a pure **Point‑to‑Anchor Proximity Matrix**. If a building physically resides tightly within a 200‑meter cluster of a text‑verified **Medium Zone** anchor but sits over 400 meters away from the closest **Premium Zone** anchor, it is mathematically and legally impossible for that building to "overlap" or sit inside a "Premium" boundary. The straight‑line geodesic distance acts as an ironclad defense, revealing that the visual map discrepancies are clerical typos, not intentional zoning.
+
+#### Axis-dominance (Boundary Based Analysis):
+If every reference point of a tier lies on one side of a building (all-north / all-south / all-east / all-west), then NO polygon connecting those points — whatever its true, unknown shape — could contain that building. This is a proof, not an estimate: a straight edge between two points that are both, say, south of a line stays south of that line everywhere along it, so a polygon whose every vertex is south of the line can never cross it. **You win....YAAY!**
+
+#### Illustration (Boundary Estimate):
+when axis-dominance fails and there are multiple points of the same tier clustered together, PP-ME draws a best-effort shape (simple polygon) purely to build the "here's my whereabouts" mental picture; this shape is **NOT** a proof of the true boundary, rather a visual representation of your location and tier clusters.
+
+**In other words:** Landlords can't just draw a line on a map and call it "Premium". The law says numbers win, and we have numbers.
 
 ---
 
