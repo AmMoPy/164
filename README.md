@@ -2,6 +2,13 @@
 
 <img width="50%" src="https://raw.githubusercontent.com/AmMoPy/164/main/assets/ppme.svg">
 
+<details>
+<summary><h3>DEMO</h3></summary>
+
+https://github.com/user-attachments/assets/9d5e15c9-876d-4c58-ab7a-9ef0e13d7f00
+
+</details>
+
 # PinPointMe - GPS/DMS Point Based Proximity Dashboard
 
 </div>

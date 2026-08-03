@@ -411,6 +411,13 @@ html[lang="en"] .bd-divider{letter-spacing:.08em}
 .gp-canvas-wrap{position:relative;width:100%;aspect-ratio:4/3;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--surface2);overflow:hidden}
 .gp-canvas-wrap canvas{width:100%;height:100%;display:block}
+
+.gp-legend{display:flex;flex-wrap:wrap;gap:11px;margin-top:8px;padding:6px 2px;font-size:10.5px;color:var(--ink2)}
+.gp-lg-item{display:inline-flex;align-items:center;gap:5px}
+.gp-lg-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.gp-lg-dot.gp-lg-you{border-radius:2px;transform:rotate(45deg)}
+.gp-lg-line{width:14px;height:0;border-top:1.5px dashed var(--ink2);display:inline-block}
+
 .gp-empty{display:flex;align-items:center;justify-content:center;height:100%;padding:16px;text-align:center;
   font-size:12px;color:var(--ink2)}
 .gp-status{display:flex;flex-direction:column;gap:7px;margin-top:12px}
@@ -423,6 +430,10 @@ html[lang="en"] .gp-row .gp-tier{letter-spacing:.06em}
 .gp-row.proof{border-color:var(--ok);background:var(--ok-soft)}
 .gp-row.proof .gp-badge{color:var(--ok)}
 .gp-row.hedge{border-color:var(--line2)}
+
+.gp-row.borderline{border-color:var(--warn);background:var(--warn-soft)}
+.gp-row.borderline .gp-badge{color:var(--warn)}
+
 .gp-row.hedge .gp-badge{color:var(--ink2)}
 .gp-row.thin{opacity:.75}
 .gp-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-sm);
@@ -438,6 +449,7 @@ html[lang="en"] .gp-badge{letter-spacing:.06em}
 .snackbar .cnt{font-family:var(--mono);font-size:11px;opacity:.7}
 .foot{max-width:880px;margin-inline:auto;padding:0 16px 44px;color:var(--ink2);font-size:11.5px;font-family:var(--mono)}
 @media (max-width:760px){.chip-datum,.chip-clock{display:none}.brand-text p{display:none}}
+@media (min-width:761px){html{zoom:1.25}} /* lazy fix */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -624,6 +636,8 @@ html[lang="en"] .gp-badge{letter-spacing:.06em}
         <div class="drawer-actions">
           <button type="button" id="pasteApply" class="btn primary tiny" data-i18n="paste.apply"></button>
           <button type="button" id="pasteCancel" class="btn tiny" data-i18n="paste.cancel"></button>
+          <button type="button" id="pasteUploadBtn" class="btn tiny" data-i18n="paste.upload"></button>
+          <input type="file" id="pasteUploadInput" accept=".txt,.csv,.tsv,text/plain,text/csv,text/tab-separated-values" hidden>
           <span id="pasteResult" role="status"></span>
         </div>
         <div class="paste-issues" id="pasteIssues" role="status"></div>
@@ -716,6 +730,13 @@ html[lang="en"] .gp-badge{letter-spacing:.06em}
           <div class="gp-body" id="gpBody">
             <div class="gp-in">
               <p class="gp-note" data-i18n="geo.note"></p>
+               <div class="gp-legend" id="gpLegend">
+                <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--gold-bright)"></i><span data-i18n="tier.premium"></span></span>
+                <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--info)"></i><span data-i18n="tier.medium"></span></span>
+                <span class="gp-lg-item"><i class="gp-lg-dot" style="background:var(--gray)"></i><span data-i18n="tier.economic"></span></span>
+                <span class="gp-lg-item"><i class="gp-lg-dot gp-lg-you" style="background:var(--accent)"></i><span data-i18n="geo.you"></span></span>
+                <span class="gp-lg-item"><i class="gp-lg-line"></i><span data-i18n="geo.legendProof"></span></span>
+              </div>             
               <div class="gp-canvas-wrap"><canvas id="gpCanvas"></canvas></div>
               <div class="gp-status" id="gpStatus"></div>
             </div>
@@ -820,8 +841,10 @@ en:{
 'loc.block':'Location fix rejected — accuracy ±{n} m exceeds the {max} m trust limit. Input coordinates manually.',
 'loc.block.short':'Location fix rejected — too coarse for analysis',
 'btn.add':'Add row','btn.paste':'Bulk paste','btn.delall':'Delete all','btn.run':'Run proximity analysis',
-'btn.next':'Next · Reference zones','btn.back':'Back','btn.csv':'CSV evidence','btn.json':'JSON project', 'btn.geo':'GeoJSON (geojson.io)',
+'btn.next':'Next · Reference zones','btn.back':'Back','btn.csv':'CSV evidence','btn.json':'JSON project','btn.geo':'GeoJSON (geojson.io)',
 'geojson.target':'Target','geojson.decreeBase':'Decree base',
+'geojson.openedToast':'GeoJSON file downloaded and opened in geojson.io.',
+'geojson.tooLargeToast':'GeoJSON file downloaded — dataset too large for a direct link, drag the file onto geojson.io instead.',
 'geojson.polyNote':'Illustrative reconstruction only — a simple polygon drawn through this tier\'s reference points to build intuition, not a proven or legally authoritative boundary.',
 'geojson.lineNote':'Proven exclusion line: no possible boundary through this tier\'s reference points could cross to the far side of this line, given their plotted positions.',
 'geojson.disclaimer':'Generated from user-entered reference points for spatial visualization and debate support. Point and \"illustrative-reconstruction\" geometries are not certified survey data. See each feature\'s properties for its role and authoritativeness.',
@@ -839,14 +862,16 @@ en:{
 'geo.title':'Positional Evidence','geo.note':'Built from the same reference points already in the matrix — a spatial reading of the evidence, not a verdict.',
 'geo.cntPts':'points plotted','geo.you':'YOU','geo.north':'NORTH','geo.south':'SOUTH','geo.east':'EAST','geo.west':'WEST',
 'geo.side.north':'the north','geo.side.south':'the south','geo.side.east':'the east','geo.side.west':'the west',
-'geo.badgeProof':'Proven','geo.badgeHedge':'Illustrative','geo.badgeThin':'Too few points',
+'geo.badgeProof':'Proven','geo.badgeHedge':'Illustrative','geo.badgeThin':'Too few points','geo.badgeBorderline':'Borderline','geo.legendProof':'Proof line',
+'geo.borderline':'Sits within the edge tolerance (~2 m) of the illustrative {tier} shape drawn through {n} points — effectively on the boundary itself. Inconclusive by construction; not reported as inside or outside.',
 'geo.excluded':'Every one of the {n} {tier} points lies to {side} of your location (edge: {extreme}) — no possible {tier} boundary through these points could contain your property. Margin: {margin}.',
 'geo.hedgeInside':'Falls within the tool\'s best-effort shape drawn through {n} {tier} points — illustrative only, not proof of containment.',
 'geo.hedgeOutside':'Falls outside the tool\'s best-effort shape drawn through {n} {tier} points — illustrative only.',
 'geo.thin':'Only {n} {tier} reference point(s) — too few to draw a meaningful shape; the position is shown, not a boundary.',
 'undo.undo':'Undo','undo.rowDel':'Row deleted','undo.rowsDel':'{n} rows deleted','undo.clear':'Case cleared',
 'paste.hint':'One block per line: Name ⇥ Tier ⇥ X ⇥ Y — tab (2x space) or “|” separated. Tier: Premium/Medium/Economic. Name + Tier are optional (accepts X Y only DMS or Decimal)',
-'paste.apply':'Parse & Append','paste.cancel':'Cancel','paste.result':'Added {n} row(s) · skipped {m}',
+'paste.apply':'Parse & Append','paste.cancel':'Cancel','paste.upload':'Upload file','paste.result':'Added {n} row(s) · skipped {m}',
+'paste.uploaded':'Loaded {name} — review below, then Parse & Append.','paste.uploadTooBig':'File too large (max 2 MB) — split it or paste the text directly.','paste.uploadReadError':'Could not read that file as text.',
 'paste.autoName':'Block',
 'paste.lineNo':'Line {n}',
 'paste.issueCols':'could not split into columns',
@@ -884,8 +909,10 @@ ar:{
 'locate.coarse':'تحديد تقريبي (±{n} م) — تحقق من نقطة رفع مساحي قبل التقديم',
 'loc.block':'رُفض تحديد الموقع — دقة ±{n} م تتجاوز حد الثقة ({max} م). أدخل إحداثيات القرار يدويًا.',
 'btn.add':'إضافة صف','btn.paste':'لصق جماعي','btn.delall':'حذف الكل','btn.run':'تحليل التقارب',
-'btn.next':'التالي · المناطق المرجعية','btn.back':'رجوع','btn.csv':'أدلة CSV','btn.json':'مشروع JSON', 'btn.geo':'GeoJSON (geojson.io)',
+'btn.next':'التالي · المناطق المرجعية','btn.back':'رجوع','btn.csv':'أدلة CSV','btn.json':'مشروع JSON','btn.geo':'GeoJSON (geojson.io)',
 'geojson.target':'الهدف','geojson.decreeBase':'أساس القرار',
+'geojson.openedToast':'تم تنزيل ملف GeoJSON وفتحه في geojson.io.',
+'geojson.tooLargeToast':'تم تنزيل ملف GeoJSON — البيانات أكبر من أن تُفتح برابط مباشر، اسحب الملف إلى geojson.io يدويًا.',
 'geojson.polyNote':'إعادة بناء استرشادية فقط — شكل مبسّط مرسوم عبر النقاط المرجعية لهذا التصنيف لبناء تصوّر مكاني، وليس حدًا مؤكدًا أو معتمدًا قانونًا.',
 'geojson.lineNote':'خط استبعاد مؤكد: لا يمكن لأي حد يمر بالنقاط المرجعية لهذا التصنيف أن يتجاوز الجانب الآخر من هذا الخط، بناءً على مواقعها المرسومة.',
 'geojson.disclaimer':'تم إنشاؤه من نقاط مرجعية أدخلها المستخدم لأغراض التصور المكاني ودعم النقاش. نقاط \"إعادة البناء الاسترشادية\" ليست بيانات مسح معتمدة. راجع خصائص كل عنصر لمعرفة دوره ومدى اعتماديته.',
@@ -903,14 +930,16 @@ ar:{
 'geo.title':'أدلة موضعية','geo.note':'مبنية على نفس النقاط المرجعية الموجودة بالفعل في الجدول — قراءة مكانية للأدلة، وليست حكمًا.',
 'geo.cntPts':'نقطة مرسومة','geo.you':'أنت','geo.north':'شمال','geo.south':'جنوب','geo.east':'شرق','geo.west':'غرب',
 'geo.side.north':'الشمال','geo.side.south':'الجنوب','geo.side.east':'الشرق','geo.side.west':'الغرب',
-'geo.badgeProof':'مؤكد','geo.badgeHedge':'استرشادي','geo.badgeThin':'نقاط غير كافية',
+'geo.badgeProof':'مؤكد','geo.badgeHedge':'استرشادي','geo.badgeThin':'نقاط غير كافية','geo.badgeBorderline':'حدّي','geo.legendProof':'خط الإثبات',
+'geo.borderline':'يقع ضمن هامش تسامح الحافة (~2 م) لشكل {tier} الاسترشادي المرسوم عبر {n} نقطة — أي على الحد نفسه تقريبًا. غير حاسم بطبيعته؛ لا يُصنَّف كداخل أو خارج.',
 'geo.excluded':'كل نقطة من نقاط {tier} الـ {n} تقع إلى {side} من موقعك (الحافة: {extreme}) — لا يمكن لأي حد {tier} يمر بهذه النقاط أن يشمل عقارك. الهامش: {margin}.',
 'geo.hedgeInside':'يقع داخل الشكل الاسترشادي المرسوم عبر {n} نقطة {tier} — للتوضيح فقط، وليس إثباتًا للاحتواء.',
 'geo.hedgeOutside':'يقع خارج الشكل الاسترشادي المرسوم عبر {n} نقطة {tier} — للتوضيح فقط.',
 'geo.thin':'{n} نقطة {tier} مرجعية فقط — عدد غير كافٍ لرسم شكل ذي معنى؛ يُعرض الموضع دون حدود.',
 'undo.undo':'تراجع','undo.rowDel':'حُذف الصف','undo.rowsDel':'حُذفت {n} صفوف','undo.clear':'مُسحت القضية',
 'paste.hint':'بلوك واحد لكل سطر: الاسم ⇤ التصنيف ⇤ Y ⇤ X — بفاصل تاب (2x مسافة) أو «|». التصنيف: متميز/متوسط/اقتصادي. الاسم والتصنيف اختياريان (يقبل Y X فقط عشري أو خام)',
-'paste.apply':'تحليل وإلحاق','paste.cancel':'إلغاء','paste.result':'أُضيف {n} صف · تُجوهل {m}',
+'paste.apply':'تحليل وإلحاق','paste.cancel':'إلغاء','paste.upload':'رفع ملف','paste.result':'أُضيف {n} صف · تُجوهل {m}',
+'paste.uploaded':'تم تحميل {name} — راجعه أدناه ثم اضغط تحليل وإلحاق.','paste.uploadTooBig':'الملف كبير جدًا (الحد الأقصى 2 ميجابايت) — قسّمه أو الصق النص مباشرة.','paste.uploadReadError':'تعذّرت قراءة هذا الملف كنص.',
 'paste.autoName':'بلوك',
 'paste.lineNo':'السطر {n}',
 'paste.issueCols':'تعذّر تقسيمه إلى أعمدة',
@@ -1086,7 +1115,7 @@ function applyLang(next){
   $('#langEn').classList.toggle('active',lang==='en');
   $('#langAr').classList.toggle('active',lang==='ar');
   tickClock(); refreshAllReadouts(); updateVerdictState();
-  if(state.analyzed){renderVerdict();renderBreakdown()}
+  if(state.analyzed){renderVerdict();renderBreakdown();renderGeoProof()}
   try{localStorage.setItem('lbpc-lang',lang)}catch(e){}
   autosave();
 }
@@ -1438,13 +1467,11 @@ function renderBreakdown(){
       with the plotted points. */
 const GEO_TIERS=['premium','medium','economic'];
 const GEO_MIN_SHAPE=3;                 // fewest vertices worth drawing as a filled shape
-const M_PER_SEC_LAT=30.8, M_PER_SEC_LON=26.7; // meridian/parallel arc-length per arcsecond near Cairo's latitude (~30°N).
-                                               // Axis-aligned only (N-S or E-W) — a deliberately simple constant for this
-                                               // widget's margin readout, distinct from the tool's primary Vincenty/Haversine
-                                               // point-to-point distances used everywhere else.
-function degMToNS(deg){return Math.abs(deg)*3600*M_PER_SEC_LAT} // TODO: Constant coefficients to account for
-                                                                // longitude shrinkage moving away from the equator
-function degMToEW(deg){return Math.abs(deg)*3600*M_PER_SEC_LON}
+const M_PER_SEC_LON_EQ=30.92; // meters per arcsecond of longitude AT THE EQUATOR (2·π·a / (360·3600), WGS84 a=6378137) —
+                               // the only latitude-independent constant needed; actual EW distance scales by cos(lat) below.
+                               // (NS no longer uses an approximated constant at all — see axisDominance, which calls
+                               // vincentyM directly: a meridian is an exact geodesic, so there is nothing to approximate.)
+function degMToEW(deg,lat){return Math.abs(deg)*3600*M_PER_SEC_LON_EQ*Math.cos(lat*DEG)}
 
 function tierGeoData(tier){
   const pts=state.rows.filter(r=>r.tier===tier&&r.okX&&r.okY)
@@ -1459,31 +1486,96 @@ function tierGeoData(tier){
    provably clears the entire tier cluster. */
 function axisDominance(target,g){
   const out=[];
-  if(target.lat>g.maxLat)out.push({side:'south',axis:'ns',marginDeg:target.lat-g.maxLat,extreme:decToDMS(g.maxLat,'lat')});
-  if(target.lat<g.minLat)out.push({side:'north',axis:'ns',marginDeg:g.minLat-target.lat,extreme:decToDMS(g.minLat,'lat')});
-  if(target.lon>g.maxLon)out.push({side:'west', axis:'ew',marginDeg:target.lon-g.maxLon,extreme:decToDMS(g.maxLon,'lon')});
-  if(target.lon<g.minLon)out.push({side:'east', axis:'ew',marginDeg:g.minLon-target.lon,extreme:decToDMS(g.minLon,'lon')});
+  if(target.lat>g.maxLat)out.push({side:'south',axis:'ns',marginDeg:target.lat-g.maxLat,extreme:decToDMS(g.maxLat,'lat'),
+    marginM:vincentyM(target.lat,target.lon,g.maxLat,target.lon)});
+  if(target.lat<g.minLat)out.push({side:'north',axis:'ns',marginDeg:g.minLat-target.lat,extreme:decToDMS(g.minLat,'lat'),
+    marginM:vincentyM(target.lat,target.lon,g.minLat,target.lon)});
+  if(target.lon>g.maxLon)out.push({side:'west', axis:'ew',marginDeg:target.lon-g.maxLon,extreme:decToDMS(g.maxLon,'lon'),
+    marginM:degMToEW(target.lon-g.maxLon,target.lat)});
+  if(target.lon<g.minLon)out.push({side:'east', axis:'ew',marginDeg:g.minLon-target.lon,extreme:decToDMS(g.minLon,'lon'),
+    marginM:degMToEW(g.minLon-target.lon,target.lat)});
   console.info('[geo-proof] Phase 1 '+(out.length?'short-circuit':'pass-through')+' — '+g.tier+' ('+g.pts.length+' pts)'+
     (out.length?': target clears the cluster to the '+out.map(o=>o.side).join(' & '):': target sits inside the cluster\'s bounding extent'));
   return out;
 }
-/* Coordinate sorting: order a point cloud by ascending angle around its own
-   centroid — this is counter-clockwise in standard (east=+x, north=+y)
-   orientation — so connecting them in sequence never self-intersects and
-   matches GeoJSON's expected exterior-ring winding (RFC 7946) directly. */
-function sortPolygonCW(pts){
+/* Fallback ordering only (angular sort around the centroid) — used solely
+   if the concave hull below can't converge before its safety cap. Ascending
+   angle is counter-clockwise in standard (east=+x, north=+y) orientation,
+   matching GeoJSON's expected exterior-ring winding (RFC 7946) directly. */
+function sortPolygonFallback(pts){
 /* computes the true mathematical arithmetic mean (the centroid) of the coordinates, 
-   then uses Math.atan2 to order them by their relative vectors from (-pi) to (+pi) 
-   TODO: consider upgrading from an angular sort to a pure Convex Hull (Monotone Chain) 
-   or a alpha-shape boundary trace. Because currently this algorithm guarantees a non-intersecting 
-   closed path for convex or star-shaped polygons, but it can mistakenly flatten boundaries on complex 
-   concave polygons (where a boundary dips deeply inward like a "V" shape) */
+   then uses Math.atan2 to order them by their relative vectors from (-pi) to (+pi) */
   if(pts.length<3)return pts.slice();
   const cLon=pts.reduce((s,p)=>s+p.lon,0)/pts.length, cLat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
   return pts.slice().sort((a,b)=>Math.atan2(a.lat-cLat,a.lon-cLon)-Math.atan2(b.lat-cLat,b.lon-cLon));
 }
+function cross3(a,b,c){return (b.lon-a.lon)*(c.lat-a.lat)-(b.lat-a.lat)*(c.lon-a.lon)}
+function segmentsIntersect(p1,p2,p3,p4){
+  const d1=cross3(p3,p4,p1),d2=cross3(p3,p4,p2),d3=cross3(p1,p2,p3),d4=cross3(p1,p2,p4);
+  return ((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0));
+}
+function edgeHitsHull(hull,a,b){
+  for(let i=0;i<hull.length-1;i++){
+    const p1=hull[i],p2=hull[i+1];
+    if(p1===a||p2===a||p1===b||p2===b)continue;     // adjacent edges never count as an intersection here
+    if(segmentsIntersect(a,b,p1,p2))return true;
+  }
+  return false;
+}
+function angleOf(from,to){return Math.atan2(to.lat-from.lat,to.lon-from.lon)}
+function cwTurn(prevAngle,candAngle){                // 0 = straight ahead, growing toward a full right turn
+  let d=prevAngle-candAngle;
+  while(d<0)d+=Math.PI*2; while(d>=Math.PI*2)d-=Math.PI*2;
+  return d;
+}
+function tryConcaveHull(points,k){
+  let start=points[0];
+  for(const p of points)if(p.lat<start.lat||(p.lat===start.lat&&p.lon<start.lon))start=p;
+  const hull=[start];
+  let remaining=points.filter(p=>p!==start);
+  let current=start,prevAngle=0;                      // initial reference direction: due east
+  const maxSteps=points.length*3;                      // safety bound, not expected to bind in practice
+  let steps=0;
+  while(remaining.length>0&&steps++<maxSteps){
+    const kk=Math.min(k,remaining.length);
+    const candidates=remaining.slice().sort((a,b)=>{
+      const da=(a.lon-current.lon)**2+(a.lat-current.lat)**2, db=(b.lon-current.lon)**2+(b.lat-current.lat)**2;
+      return da-db;
+    }).slice(0,kk);
+    candidates.sort((a,b)=>cwTurn(prevAngle,angleOf(current,a))-cwTurn(prevAngle,angleOf(current,b)));
+    let chosen=null;
+    for(const cand of candidates){
+      if(edgeHitsHull(hull,current,cand))continue;
+      chosen=cand;break;
+    }
+    if(!chosen)return null;                            // this k failed — caller retries with a larger k
+    hull.push(chosen);
+    remaining=remaining.filter(p=>p!==chosen);
+    prevAngle=angleOf(current,chosen);
+    current=chosen;
+    if(remaining.length===0){
+      if(edgeHitsHull(hull,current,start))return null;  // can't legally close the ring
+      hull.push(start);
+    }
+  }
+  if(hull.length<4||hull[hull.length-1]!==start)return null;
+  const ring=hull.slice(0,-1);
+  for(const p of points){                              // every original point must end up on or inside the hull
+    if(ring.includes(p))continue;
+    if(!pointInPolygon(p,ring))return null;
+  }
+  return ring;
+}
+function concaveHullKNN(points){
+  const maxK=Math.min(points.length-1,12);              // practical cap — avoids pathological blow-up on larger sets
+  for(let k=3;k<=maxK;k++){
+    const hull=tryConcaveHull(points,k);
+    if(hull)return hull;
+  }
+  return sortPolygonFallback(points);                    // last resort: always simple, just not concave-aware
+}
 /* Phase 2 — standard ray-casting point-in-polygon test. */
-function pointInPolygon(pt,poly){ // TODO: epsilon tolerance (0.00001) to handle properties directly touching zone edges (y_i == y_j).
+function pointInPolygon(pt,poly){
   let inside=false;
   for(let i=0,j=poly.length-1;i<poly.length;j=i++){
     const xi=poly[i].lon,yi=poly[i].lat,xj=poly[j].lon,yj=poly[j].lat;
@@ -1494,6 +1586,27 @@ function pointInPolygon(pt,poly){ // TODO: epsilon tolerance (0.00001) to handle
   }
   return inside;
 }
+/* Borderline/inconclusive detection — point-to-segment distance in a
+   locally-flat metre approximation (fine at this scale), used to flag a
+   target sitting within GEO_EPSILON_M of the illustrative shape's edge as
+   a distinct third state rather than forcing a numerically shaky in/out
+   call exactly where it matters least to be overconfident. */
+const GEO_EPSILON_M=2;
+function distToSegmentM(pt,a,b,refLat){
+  const cosLat=Math.cos(refLat*DEG), mPerDegLat=111320, mPerDegLon=111320*cosLat;
+  const toXY=p=>({x:p.lon*mPerDegLon,y:p.lat*mPerDegLat});
+  const P=toXY(pt),A=toXY(a),B=toXY(b);
+  const dx=B.x-A.x,dy=B.y-A.y,lenSq=dx*dx+dy*dy;
+  let tt=lenSq>0?((P.x-A.x)*dx+(P.y-A.y)*dy)/lenSq:0; tt=Math.max(0,Math.min(1,tt));
+  const cx=A.x+tt*dx,cy=A.y+tt*dy,ddx=P.x-cx,ddy=P.y-cy;
+  return Math.sqrt(ddx*ddx+ddy*ddy);
+}
+function nearBoundaryM(pt,poly,refLat){
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    if(distToSegmentM(pt,poly[j],poly[i],refLat)<=GEO_EPSILON_M)return true;
+  }
+  return false;
+}
 function analyzeGeoProof(){
   if(!state.target.ok)return null;
   const target={lat:state.target.lat,lon:state.target.lon};
@@ -1503,8 +1616,8 @@ function analyzeGeoProof(){
     const excludedBy=axisDominance(target,g);
     let shape=null;
     if(!excludedBy.length&&g.pts.length>=GEO_MIN_SHAPE){
-      const poly=sortPolygonCW(g.pts);
-      shape={poly,inside:pointInPolygon(target,poly)};
+      const poly=concaveHullKNN(g.pts);
+      shape={poly,inside:pointInPolygon(target,poly),borderline:nearBoundaryM(target,poly,target.lat)};
     }
     tiers.push({...g,excludedBy,shape});
   }
@@ -1520,14 +1633,18 @@ function renderGeoStatus(analysis){
       cls+=' proof';
       badge=t('geo.badgeProof');
       msg=g.excludedBy.map(ex=>{
-        const m=(ex.axis==='ns'?degMToNS(ex.marginDeg):degMToEW(ex.marginDeg));
+        const m=ex.marginM;
         return t('geo.excluded')
           .replace('{n}',g.pts.length).replace(/\{tier\}/g,t('tier.'+g.tier))
           .replace('{side}',t('geo.side.'+ex.side)).replace('{extreme}',ex.extreme)
           .replace('{margin}',fmt.format(m)+unitStr());
       }).join(' ');
+    }else if(g.shape&&g.shape.borderline){
+      cls+=' borderline';
+      badge=t('geo.badgeBorderline');
+      msg=t('geo.borderline').replace('{n}',g.pts.length).replace(/\{tier\}/g,t('tier.'+g.tier));
     }else if(g.shape){
-      cls+=g.shape.inside?' hedge':' hedge';
+      cls+=' hedge';
       badge=t('geo.badgeHedge');
       msg=(g.shape.inside?t('geo.hedgeInside'):t('geo.hedgeOutside'))
         .replace('{n}',g.pts.length).replace(/\{tier\}/g,t('tier.'+g.tier));
@@ -1750,16 +1867,19 @@ function exportCSV(){
   a.href=url;a.download='boundary-proximity-evidence.csv';document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),600);
 }
-function exportGeoJSON(){
-  if(!state.analyzed){runAnalysis(false);if(!state.analyzed)return}
+function buildGeoJSON(){
+  if(!state.analyzed){runAnalysis(false);if(!state.analyzed)return null}
   const features=[];
+  const TIER_HEX={premium:cssVar('--gold-bright'),medium:cssVar('--info'),economic:cssVar('--gray')};
   if(state.target.ok){
     features.push({type:'Feature',geometry:{type:'Point',coordinates:[state.target.lon,state.target.lat]},
-      properties:{role:'target',name:t('geojson.target'),lat_dms:decToDMS(state.target.lat,'lat'),lon_dms:decToDMS(state.target.lon,'lon')}});
+      properties:{role:'target',name:t('geojson.target'),lat_dms:decToDMS(state.target.lat,'lat'),lon_dms:decToDMS(state.target.lon,'lon'),
+        'marker-color':'#1c4d74','marker-symbol':'star'}});
   }
   if(state.decree.okX&&state.decree.okY){
     features.push({type:'Feature',geometry:{type:'Point',coordinates:[state.decree.x,state.decree.y]},
-      properties:{role:'decree-base',name:t('geojson.decreeBase'),lat_dms:decToDMS(state.decree.y,'lat'),lon_dms:decToDMS(state.decree.x,'lon')}});
+      properties:{role:'decree-base',name:t('geojson.decreeBase'),lat_dms:decToDMS(state.decree.y,'lat'),lon_dms:decToDMS(state.decree.x,'lon'),
+        'marker-color':'#b23b2e','marker-symbol':'flag'}});
   }
   state.sorted.forEach((r,i)=>{
     if(!(r.okX&&r.okY))return;
@@ -1767,7 +1887,8 @@ function exportGeoJSON(){
       role:'reference',name:r.name.trim()||('#'+(i+1)),tier:r.tier,rank:i+1,
       distance_vincenty_m:r.dist!==Infinity?Number(r.dist.toFixed(2)):null,
       distance_haversine_m:r.distH!==Infinity?Number(r.distH.toFixed(2)):null,
-      dms_x:assembleDMS(r.x),dms_y:assembleDMS(r.y)
+      dms_x:assembleDMS(r.x),dms_y:assembleDMS(r.y),
+      'marker-color':TIER_HEX[r.tier]||'#8a94a6'
     }});
   });
   /* illustrative reconstructions + proven exclusion lines — reuse the
@@ -1776,10 +1897,20 @@ function exportGeoJSON(){
   const analysis=gpLastAnalysis;
   if(analysis)analysis.tiers.forEach(g=>{
     if(g.shape){
-      const ring=g.shape.poly.map(p=>[p.lon,p.lat]);      // already counter-clockwise — see sortPolygonCW note
-      ring.push(ring[0]);                                 // close the ring prevents validation and shape fill errors
+      /* The concave hull's greedy walk does not guarantee a fixed winding
+         direction the way the old plain angular sort did — verified by
+         testing multiple point configurations, some come out CW, some CCW.
+         Compute the signed area and flip only if needed, so the exported
+         ring is always correctly counter-clockwise (GeoJSON RFC 7946). */
+      let pts=g.shape.poly, area=0;
+      for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];area+=a.lon*b.lat-b.lon*a.lat}
+      if(area<0)pts=pts.slice().reverse();
+      const ring=pts.map(p=>[p.lon,p.lat]);
+      ring.push(ring[0]);                                  // close the ring
       features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[ring]},properties:{
-        role:'illustrative-reconstruction',tier:g.tier,authoritative:false,point_count:g.pts.length,note:t('geojson.polyNote')
+        role:'illustrative-reconstruction',tier:g.tier,authoritative:false,point_count:g.pts.length,
+        target_relationship:g.shape.borderline?'borderline':(g.shape.inside?'illustrative-inside':'illustrative-outside'),
+        note:t('geojson.polyNote')
       }});
     }
     g.excludedBy.forEach(ex=>{
@@ -1795,16 +1926,38 @@ function exportGeoJSON(){
       }
       features.push({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{
         role:'dominance-boundary',tier:g.tier,side:ex.side,extreme_dms:ex.extreme,
-        margin_m:Number((ex.axis==='ns'?degMToNS(ex.marginDeg):degMToEW(ex.marginDeg)).toFixed(1)),
+        margin_m:Number(ex.marginM.toFixed(1)),
         note:t('geojson.lineNote')
       }});
     });
   });
   const fc={type:'FeatureCollection',properties:{generated:new Date().toISOString(),source:'Boundary Proximity Calculator',disclaimer:t('geojson.disclaimer')},features};
-  const blob=new Blob([JSON.stringify(fc,null,2)],{type:'application/geo+json'});
+  return fc;
+}
+function exportGeoJSON(fc){
+  fc=fc||buildGeoJSON();if(!fc)return;
+  const json=JSON.stringify(fc,null,2);
+  const blob=new Blob([json],{type:'application/geo+json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='boundary-proximity-evidence.geojson';document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),600);
+}
+/* The existing GeoJSON button now also opens geojson.io pre-loaded
+   with the same data (via its documented #data= URL-hash API), so the
+   user gets both a durable evidence file AND an immediate real-basemap
+   view from one click — no map/tile code of our own needed. Only
+   practical limit is URL length in some browsers; past that, still keep
+   the file (already downloaded above) and let the user drag it onto the
+   site manually instead of a broken/truncated link. */
+function viewOnGeoJsonIO(){
+  const fc=buildGeoJSON();if(!fc)return;
+  exportGeoJSON(fc);
+  const serializedJSON = JSON.stringify(fc);
+  const base64 = btoa(unescape(encodeURIComponent(serializedJSON)));  // Convert to base64 for safe URL embedding
+  const url=`https://geojson.io/#data=data:application/json;base64,${base64}`;
+  /* 100k chars safe for most browsers, tool's real worst case (100 rows, full properties, long names) at ~50k chars. The # fragment never reaches a server (geojson.io reads it entirely client-side) */
+  if(url.length<=100000){window.open(url,'_blank','noopener');toast(t('geojson.openedToast'))}
+  else{window.open('https://geojson.io/','_blank','noopener');toast(t('geojson.tooLargeToast'))}
 }
 
 /* ════════════════════ SNACKBAR / TOAST ════════════════════ */
@@ -1960,11 +2113,26 @@ function init(){
     if(res.added){$('#pasteBox').value='';scheduleRecalc()}
   });
   $('#pasteBox').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('#pasteApply').click()});
+  $('#pasteUploadBtn').addEventListener('click',()=>$('#pasteUploadInput').click());
+  $('#pasteUploadInput').addEventListener('change',e=>{
+    const file=e.target.files&&e.target.files[0]; e.target.value='';         // reset so re-choosing the same file still fires 'change'
+    if(!file)return;
+    if(file.size>2*1024*1024){toast(t('paste.uploadTooBig'));return}
+    const reader=new FileReader();
+    reader.onload=()=>{
+      $('#pasteBox').value=String(reader.result||'');
+      $('#pasteResult').textContent=t('paste.uploaded').replace('{name}',file.name);
+      $('#pasteIssues').innerHTML='';
+      if(!drawer.classList.contains('open'))drawer.classList.add('open');
+    };
+    reader.onerror=()=>toast(t('paste.uploadReadError'));
+    reader.readAsText(file);
+  });
 
   /* analysis + export */
   $('#runBtn').addEventListener('click',()=>{state.reached=3;runAnalysis(false);if(state.analyzed)goStep(3)});
   $('#csvBtn').addEventListener('click',exportCSV);
-  $('#geoBtn').addEventListener('click',exportGeoJSON);
+  $('#geoBtn').addEventListener('click',viewOnGeoJsonIO);
   $('#jsonBtn').addEventListener('click',exportJSON);
 
   /* breakdown disclosure */
