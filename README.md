@@ -37,9 +37,13 @@ https://github.com/user-attachments/assets/9d5e15c9-876d-4c58-ab7a-9ef0e13d7f00
 
 **Perfect for:** Tenants who want to fight back.
 
-**Silence that Landlord [164](https://suno.com/s/cHzm2H0msPVBpGo1)**
+**Listen to the Lore:** Boring documentation is dead. Choose your vibe to hear how this app challenge fraudulent Landlord claims
 
-**Promote your trash code [FIZX](https://github.com/AmMoPy/FIZX)**
+| 🪘 The Arabian Dance | ⚡ The Future Pop Mix |
+| :---: | :---: |
+| [SoundCloud](https://on.soundcloud.com/OdKqPyWGgzufLloKd3) | [Suno](https://suno.com/s/cHzm2H0msPVBpGo1) |
+
+*Want to visualize the breakdown? DEMO text were synced using [FIZX](https://github.com/AmMoPy/FIZX) my open-source text-alignment engine.*
 
 ---
 
